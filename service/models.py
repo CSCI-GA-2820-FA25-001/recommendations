@@ -5,6 +5,8 @@ All of the models are stored in this module
 """
 
 import logging
+from datetime import datetime
+from enum import Enum
 from flask_sqlalchemy import SQLAlchemy
 
 logger = logging.getLogger("flask.app")
@@ -17,7 +19,25 @@ class DataValidationError(Exception):
     """Used for an data validation errors when deserializing"""
 
 
-class YourResourceModel(db.Model):
+class RecommendationType(Enum):
+    """Enumeration of possible recommendation types"""
+
+    CROSS_SELL = "cross_sell"
+    UP_SELL = "up_sell"
+    ACCESSORY = "accessory"
+    TRENDING = "trending"
+
+
+class RecommendationStatus(Enum):
+    """Enumeration of possible recommendation statuses"""
+
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    DRAFT = "draft"
+    DELETED = "deleted"
+
+
+class Recommendation(db.Model):
     """
     Class that represents a YourResourceModel
     """
@@ -26,9 +46,23 @@ class YourResourceModel(db.Model):
     # Table Schema
     ##################################################
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(63))
+    base_product_id = db.Column(db.Integer, nullable=False)
+    recommended_product_id = db.Column(db.Integer, nullable=False)
+    weighted_score = db.Column(db.Numeric, default=1.0)
+    rationale = db.Column(db.Text)
+    status = db.Column(
+        db.Enum(RecommendationStatus), default=RecommendationStatus.DRAFT
+    )
+    recommendation_type = db.Column(db.Enum(RecommendationType), nullable=False)
+    recommendation_id = db.Column(db.Integer, nullable=False)
+    valid_from = db.Column(db.DateTime, default=datetime.now)
+    valid_to = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.now, onupdate=datetime.now, nullable=False
+    )
 
-    # Todo: Place the rest of your schema here...
+    name = db.Column(db.String(63))
 
     def __repr__(self):
         return f"<YourResourceModel {self.name} id=[{self.id}]>"
