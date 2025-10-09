@@ -57,15 +57,17 @@ class Recommendation(db.Model):
     recommendation_id = db.Column(db.Integer, nullable=False)
     valid_from = db.Column(db.DateTime, default=datetime.now)
     valid_to = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
-    updated_at = db.Column(
-        db.DateTime, default=datetime.now, onupdate=datetime.now, nullable=False
-    )
+
+    # TODO: add created_on and updated_on fields; also add triggers to update them
 
     name = db.Column(db.String(63))
 
     def __repr__(self):
-        return f"<Recommendation {self.id}: {self.base_product_id} -> {self.recommended_product_id} ({self.recommendation_type.value})>"
+        return (
+            f"<Recommendation {self.id}: "
+            f" {self.base_product_id} -> {self.recommended_product_id}"
+            f" ({self.recommendation_type.value})>"
+        )
 
     def create(self):
         """
