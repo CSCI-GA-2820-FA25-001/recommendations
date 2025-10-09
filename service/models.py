@@ -65,7 +65,7 @@ class Recommendation(db.Model):
     name = db.Column(db.String(63))
 
     def __repr__(self):
-        return f"<YourResourceModel {self.name} id=[{self.id}]>"
+        return f"<Recommendation {self.id}: {self.base_product_id} -> {self.recommended_product_id} ({self.recommendation_type.value})>"
 
     def create(self):
         """
