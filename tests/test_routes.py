@@ -24,7 +24,8 @@ import logging
 from unittest import TestCase
 from wsgi import app
 from service.common import status
-from service.models import db, YourResourceModel
+from service.models import db, Recommendation, RecommendationType, RecommendationStatus
+from tests.factories import RecommendationFactory
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
@@ -56,7 +57,7 @@ class TestYourResourceService(TestCase):
     def setUp(self):
         """Runs before each test"""
         self.client = app.test_client()
-        db.session.query(YourResourceModel).delete()  # clean up the last tests
+        db.session.query(Recommendation).delete()  # clean up the last tests
         db.session.commit()
 
     def tearDown(self):
@@ -72,4 +73,202 @@ class TestYourResourceService(TestCase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
-    # Todo: Add your test cases here...
+    ######################################################################
+    #  L I S T   R E C O M M E N D A T I O N S   T E S T S
+    ######################################################################
+
+    def test_list_all_recommendations(self):
+        """It should list all recommendations"""
+        # Create 5 recommendations
+        for _ in range(5):
+            recommendation = RecommendationFactory()
+            recommendation.create()
+
+        # Get all recommendations
+        resp = self.client.get("/recommendations")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 5)
+
+    def test_list_recommendations_empty(self):
+        """It should return an empty list when no recommendations exist"""
+        resp = self.client.get("/recommendations")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 0)
+
+    def test_list_recommendations_by_product_a_id(self):
+        """It should list recommendations filtered by product_a_id"""
+        # Create recommendations with specific base_product_id
+        target_product_id = 101
+        for _ in range(3):
+            recommendation = RecommendationFactory(base_product_id=target_product_id)
+            recommendation.create()
+
+        # Create recommendations with different base_product_id
+        for _ in range(2):
+            recommendation = RecommendationFactory(base_product_id=999)
+            recommendation.create()
+
+        # Query by product_a_id
+        resp = self.client.get(f"/recommendations?product_a_id={target_product_id}")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        self.assertEqual(len(data), 3)
+        for rec in data:
+            self.assertEqual(rec["base_product_id"], target_product_id)
+
+    def test_list_recommendations_by_relationship_type(self):
+        """It should list recommendations filtered by relationship_type"""
+        # Create recommendations with ACCESSORY type
+        for _ in range(3):
+            recommendation = RecommendationFactory(
+                recommendation_type=RecommendationType.ACCESSORY
+            )
+            recommendation.create()
+
+        # Create recommendations with different types
+        for _ in range(2):
+            recommendation = RecommendationFactory(
+                recommendation_type=RecommendationType.CROSS_SELL
+            )
+            recommendation.create()
+
+        # Query by relationship_type
+        resp = self.client.get("/recommendations?relationship_type=accessory")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        self.assertEqual(len(data), 3)
+        for rec in data:
+            self.assertEqual(rec["recommendation_type"], "accessory")
+
+    def test_list_recommendations_by_status(self):
+        """It should list recommendations filtered by status"""
+        # Create recommendations with ACTIVE status
+        for _ in range(4):
+            recommendation = RecommendationFactory(
+                status=RecommendationStatus.ACTIVE
+            )
+            recommendation.create()
+
+        # Create recommendations with different status
+        for _ in range(2):
+            recommendation = RecommendationFactory(
+                status=RecommendationStatus.INACTIVE
+            )
+            recommendation.create()
+
+        # Query by status
+        resp = self.client.get("/recommendations?status=active")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        self.assertEqual(len(data), 4)
+        for rec in data:
+            self.assertEqual(rec["status"], "active")
+
+    def test_list_recommendations_with_multiple_filters(self):
+        """It should list recommendations with multiple filters"""
+        target_product_id = 101
+        target_type = RecommendationType.ACCESSORY
+        target_status = RecommendationStatus.ACTIVE
+
+        # Create matching recommendations
+        for _ in range(2):
+            recommendation = RecommendationFactory(
+                base_product_id=target_product_id,
+                recommendation_type=target_type,
+                status=target_status,
+            )
+            recommendation.create()
+
+        # Create non-matching recommendations
+        for _ in range(3):
+            recommendation = RecommendationFactory(
+                base_product_id=999,
+                recommendation_type=RecommendationType.CROSS_SELL,
+                status=RecommendationStatus.INACTIVE,
+            )
+            recommendation.create()
+
+        # Query with multiple filters
+        resp = self.client.get(
+            f"/recommendations?product_a_id={target_product_id}"
+            f"&relationship_type=accessory&status=active"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        self.assertEqual(len(data), 2)
+        for rec in data:
+            self.assertEqual(rec["base_product_id"], target_product_id)
+            self.assertEqual(rec["recommendation_type"], "accessory")
+            self.assertEqual(rec["status"], "active")
+
+    def test_list_recommendations_invalid_product_id(self):
+        """It should handle invalid product_id gracefully"""
+        # Create some recommendations
+        for _ in range(3):
+            recommendation = RecommendationFactory()
+            recommendation.create()
+
+        # Query with invalid product_id (should be ignored or return empty)
+        resp = self.client.get("/recommendations?product_a_id=invalid")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        # Invalid type parameters should be ignored, returning all or none
+        self.assertIsInstance(data, list)
+
+    def test_list_recommendations_invalid_relationship_type(self):
+        """It should handle invalid relationship_type gracefully"""
+        # Create some recommendations
+        for _ in range(3):
+            recommendation = RecommendationFactory()
+            recommendation.create()
+
+        # Query with invalid relationship_type
+        resp = self.client.get("/recommendations?relationship_type=invalid_type")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        # Invalid enum values should return all items (no filter applied)
+        self.assertEqual(len(data), 3)
+
+    def test_list_recommendations_invalid_status(self):
+        """It should handle invalid status gracefully"""
+        # Create some recommendations
+        for _ in range(3):
+            recommendation = RecommendationFactory()
+            recommendation.create()
+
+        # Query with invalid status
+        resp = self.client.get("/recommendations?status=invalid_status")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        # Invalid enum values should return all items (no filter applied)
+        self.assertEqual(len(data), 3)
+
+    def test_list_recommendations_no_matching_results(self):
+        """It should return empty array when no recommendations match filters"""
+        # Create recommendations with specific values
+        for _ in range(3):
+            recommendation = RecommendationFactory(base_product_id=101)
+            recommendation.create()
+
+        # Query for non-existent product_id
+        resp = self.client.get("/recommendations?product_a_id=999")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 0)
+
+    # Todo: Add your other test cases here...

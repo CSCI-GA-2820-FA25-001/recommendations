@@ -107,8 +107,19 @@ class Recommendation(db.Model):
             raise DataValidationError(e) from e
 
     def serialize(self):
-        """Serializes a YourResourceModel into a dictionary"""
-        return {"id": self.id, "name": self.name}
+        """Serializes a Recommendation into a dictionary"""
+        return {
+            "id": self.id,
+            "base_product_id": self.base_product_id,
+            "recommended_product_id": self.recommended_product_id,
+            "recommendation_type": self.recommendation_type.value if self.recommendation_type else None,
+            "weighted_score": float(self.weighted_score) if self.weighted_score else None,
+            "rationale": self.rationale,
+            "status": self.status.value if self.status else None,
+            "recommendation_id": self.recommendation_id,
+            "valid_from": self.valid_from.isoformat() if self.valid_from else None,
+            "valid_to": self.valid_to.isoformat() if self.valid_to else None,
+        }
 
     def deserialize(self, data):
         """
