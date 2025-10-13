@@ -48,19 +48,12 @@ class Recommendation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     base_product_id = db.Column(db.Integer, nullable=False)
     recommended_product_id = db.Column(db.Integer, nullable=False)
-    weighted_score = db.Column(db.Numeric, default=1.0)
-    rationale = db.Column(db.Text)
     status = db.Column(
         db.Enum(RecommendationStatus), default=RecommendationStatus.DRAFT
     )
     recommendation_type = db.Column(db.Enum(RecommendationType), nullable=False)
-    recommendation_id = db.Column(db.Integer, nullable=False)
-    valid_from = db.Column(db.DateTime, default=datetime.now)
-    valid_to = db.Column(db.DateTime)
-
-    # TODO: add created_on and updated_on fields; also add triggers to update them
-
-    name = db.Column(db.String(63))
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now)
 
     def __repr__(self):
         return (
