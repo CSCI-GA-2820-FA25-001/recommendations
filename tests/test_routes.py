@@ -24,7 +24,7 @@ import logging
 from unittest import TestCase
 from wsgi import app
 from service.common import status
-from service.models import db, Recommendation
+from service.models import DataValidationError, db, Recommendation
 from .factories import RecommendationFactory
 
 DATABASE_URI = os.getenv(
@@ -143,12 +143,11 @@ class TestRecommendation(TestCase):
             test_recommendation.recommended_product_id,
         )
         self.assertEqual(new_recommendation["status"], test_recommendation.status.value)
-    
-  
+
     # ----------------------------------------------------------
     # TEST READ
     # ----------------------------------------------------------
-    
+
     def test_get_recommendation(self):
         """It should Get a single Recommendation"""
         # get the id of a recommendation
@@ -165,27 +164,38 @@ class TestRecommendation(TestCase):
         data = response.get_json()
         logging.debug("Response data = %s", data)
         self.assertIn("Not Found", data["message"])
-    
-  
+
     # ----------------------------------------------------------
     # TEST UPDATE
     # ----------------------------------------------------------
     def test_update_recommendation(self):
         """It should Update an existing Recommendation"""
-        # create a recommendation to update
+        # Create a recommendation to update
         test_recommendation = RecommendationFactory()
         response = self.client.post(BASE_URL, json=test_recommendation.serialize())
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        # update the recommendation
+        # Prepare the update payload
         new_recommendation = response.get_json()
-        logging.debug(new_recommendation)
+        new_recommendation["name"] = "Updated Recommendation Name"
+        new_recommendation["status"] = "inactive"
+
+        # Send PUT request to update
         response = self.client.put(
             f"{BASE_URL}/{new_recommendation['id']}", json=new_recommendation
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
         updated_recommendation = response.get_json()
-   
+        self.assertEqual(updated_recommendation["id"], new_recommendation["id"])
+        self.assertEqual(updated_recommendation["name"], "Updated Recommendation Name")
+        self.assertEqual(updated_recommendation["status"], "inactive")
+
+        get_response = self.client.get(f"{BASE_URL}/{new_recommendation['id']}")
+        self.assertEqual(get_response.status_code, status.HTTP_200_OK)
+        fetched = get_response.get_json()
+        self.assertEqual(fetched["name"], "Updated Recommendation Name")
+
     # ==========================================================
     # TEST DELETE
     # ==========================================================
@@ -199,12 +209,15 @@ class TestRecommendation(TestCase):
         response = self.client.get(f"{BASE_URL}/{test_recommendation.id}")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_delete_non_existing_recommendation(self):
-        """It should not Delete a Recommendation that doesn't exist"""
-        response = self.client.delete(f"{BASE_URL}/0")
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        data = response.get_json()
-        self.assertIn("was not found", data["message"])
+    def test_delete_nonexistent_recommendation(self):
+        """It should raise DataValidationError when deleting a non-persisted Recommendation"""
+        # Create a recommendation that is NOT saved to the database
+        recommendation = RecommendationFactory()
+
+        # Attempting to delete should raise DataValidationError,
+        # because SQLAlchemy will complain that the instance is not persisted
+        with self.assertRaises(DataValidationError):
+            recommendation.delete()
 
 
 ######################################################################
