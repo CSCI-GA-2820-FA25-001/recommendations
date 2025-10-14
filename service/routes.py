@@ -23,7 +23,7 @@ Delete, and List Recommendations.
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import Recommendation
+from service.models import Recommendation, RecommendationType, RecommendationStatus
 from service.common import status  # HTTP Status Codes
 
 
@@ -193,8 +193,67 @@ def check_content_type(content_type) -> None:
     if request.headers["Content-Type"] == content_type:
         return
 
-    app.logger.error("Invalid Content-Type: %s", request.headers["Content-Type"])
-    abort(
-        status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-        f"Content-Type must be {content_type}",
-    )
+
+@app.route("/recommendations", methods=["GET"])
+def list_recommendations():
+    """
+    List all Recommendations
+
+    This endpoint returns a list of all Recommendations in the database.
+    Query parameters can be used to filter the results:
+    - product_a_id: Filter by base product ID
+    - relationship_type: Filter by recommendation type (e.g., 'accessory', 'cross_sell')
+    - status: Filter by status (e.g., 'active', 'inactive')
+
+    Returns:
+        200: A JSON array of recommendations (may be empty)
+    """
+    app.logger.info("Request to list recommendations")
+
+    # Start with base query
+    query = Recommendation.query
+
+    # Filter by product_a_id (maps to base_product_id)
+    product_a_id = request.args.get("product_a_id", type=int)
+    if product_a_id:
+        app.logger.info("Filtering by product_a_id: %s", product_a_id)
+        query = query.filter(Recommendation.base_product_id == product_a_id)
+
+    # Filter by relationship_type (maps to recommendation_type)
+    relationship_type = request.args.get("relationship_type")
+    if relationship_type:
+        try:
+            # Convert string to enum
+            type_enum = RecommendationType(relationship_type)
+            app.logger.info("Filtering by relationship_type: %s", relationship_type)
+            query = query.filter(Recommendation.recommendation_type == type_enum)
+        except ValueError:
+            # Invalid enum value, log warning but don't filter
+            app.logger.warning(
+                "Invalid relationship_type value: %s. Ignoring filter.",
+                relationship_type,
+            )
+
+    # Filter by status
+    status_param = request.args.get("status")
+    if status_param:
+        try:
+            # Convert string to enum
+            status_enum = RecommendationStatus(status_param)
+            app.logger.info("Filtering by status: %s", status_param)
+            query = query.filter(Recommendation.status == status_enum)
+        except ValueError:
+            # Invalid enum value, log warning but don't filter
+            app.logger.warning(
+                "Invalid status value: %s. Ignoring filter.", status_param
+            )
+
+    # Execute query and serialize results
+    recommendations = query.all()
+    app.logger.info("Found %d recommendations", len(recommendations))
+
+    results = [rec.serialize() for rec in recommendations]
+    return jsonify(results), status.HTTP_200_OK
+
+
+# Todo: Place your REST API code here ...

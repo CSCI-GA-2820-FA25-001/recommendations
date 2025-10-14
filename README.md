@@ -1,63 +1,87 @@
-# NYU DevOps Project Template
+# NYU DevOps Project Recommendations Service
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python](https://img.shields.io/badge/Language-Python-blue.svg)](https://python.org/)
 
-This is a skeleton you can use to start your projects.
-
-**Note:** _Feel free to overwrite this `README.md` file with the one that describes your project._
+This is the Recommendations microservice for the NYU DevOps Fall 2025 eCommerce project.
 
 ## Overview
 
-This project template contains starter code for your class project. The `/service` folder contains your `models.py` file for your model and a `routes.py` file for your service. The `/tests` folder has test case starter code for testing the model and the service separately. All you need to do is add your functionality. You can use the [lab-flask-tdd](https://github.com/nyu-devops/lab-flask-tdd) for code examples to copy from.
+The Recommendations service manages product-to-product relationships to provide intelligent product suggestions to customers. It implements a REST API that supports __creating__, __reading__, __updating__, __deleting__, and __listing__ recommendation relationships between products.
 
-## Automatic Setup
+The `/service' folder contains files for the database model and the service. The `/test` file separately contains files for testing the model and the service.
 
-The best way to use this repo is to start your own repo using it as a git template. To do this just press the green **Use this template** button in GitHub and this will become the source for your repository.
+All API endpoints in this service return __JOSN__-formatted responses, including those error messages.
 
-## Manual Setup
+## Setup
 
-You can also clone this repository and then copy and paste the starter code into your project repo folder on your local computer. Be careful not to copy over your own `README.md` file so be selective in what you copy.
-
-There are 4 hidden files that you will need to copy manually if you use the Mac Finder or Windows Explorer to copy files from this folder into your repo folder.
-
-These should be copied using a bash shell as follows:
-
+Clone the repository and open it in VSCode:
 ```bash
-    cp .gitignore  ../<your_repo_folder>/
-    cp .flaskenv ../<your_repo_folder>/
-    cp .gitattributes ../<your_repo_folder>/
+    git clone git@github.com:CSCI-GA-2820-FA25-001/recommendations.git
+    cd recommendations
+    code .
+```
+If using the VSCode Remote Container, please click the automated poped-up instruction "Reopen in Container".
+
+## Run the Service
+```bash
+flask run
+```
+Once running, open the browser and visit the corresponding localhost.
+
+## Test the Codes
+All tests are located in the /tests folder:
+* test_models.py - tests the data model
+* test_routes.py - tests the REST API routes
+* factories.py - creates fake data for testing
+
+__Run all tests__:
+```bash
+flask db-create
+make test
 ```
 
-## Contents
+__Run linter for PEP8 style__
+```bash
+make lint
+```
 
-The project contains the following:
+This project follows Test-Driven Development(TDD) pratices and includes complete model and route tets with at lease 95% code coverage.
 
-```text
-.gitignore          - this will ignore vagrant and other metadata files
-.flaskenv           - Environment variables to configure Flask
-.gitattributes      - File to gix Windows CRLF issues
-.devcontainers/     - Folder with support for VSCode Remote Containers
-dot-env-example     - copy to .env to use environment variables
-pyproject.toml      - Poetry list of Python libraries required by your code
+## API Endpoints
 
-service/                   - service python package
-├── __init__.py            - package initializer
-├── config.py              - configuration parameters
-├── models.py              - module with business models
-├── routes.py              - module with service routes
-└── common                 - common code package
-    ├── cli_commands.py    - Flask command to recreate all tables
-    ├── error_handlers.py  - HTTP error handling code
-    ├── log_handlers.py    - logging setup code
-    └── status.py          - HTTP status constants
+__Recommendations__
 
-tests/                     - test cases package
-├── __init__.py            - package initializer
-├── factories.py           - Factory for testing with fake objects
-├── test_cli_commands.py   - test suite for the CLI
-├── test_models.py         - test suite for business models
-└── test_routes.py         - test suite for service routes
+Method | Endpoint | Description | Response
+--- | --- | --- | ---
+GET | /recommendations | List all recommendations | 200_OK
+POST | /recommendations | Create a new recommendation | 201_CREATED
+GET | /recommendations/<id> | Read a specific recommendation | 200_OK
+PUT | /rexommendations/<id> | Update an existing recommendation | 200_OK
+DELETE | /recommendations/<id> | Delete a recommendation | 204_NO_CONTENT
+
+## Recommendation Examples
+```json
+{
+    "id": 1,
+    "name": "Alpha",
+    "base_product_id": 100,
+    "recommended_product_id": 201,
+    "recommendation_type": "trending",
+    "status": "draft",
+    "created_at": "2025-10-12",
+    "updated_at": "2025-10-14"
+}
+{
+    "id": 98,
+    "name": "Beta",
+    "base_product_id": 177,
+    "recommended_product_id": 245,
+    "recommendation_type": "cross_sell",
+    "status": "active",
+    "created_at": "2023-06-29",
+    "updated_at": "2025-08-06"
+}
 ```
 
 ## License
