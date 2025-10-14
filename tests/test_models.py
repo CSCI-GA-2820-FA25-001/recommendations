@@ -94,10 +94,10 @@ class TestYourResourceModel(TestCase):
         self.assertIsInstance(data, dict)
         self.assertEqual(data["id"], rec.id)
         self.assertEqual(data["name"], rec.name)
-        self.assertEqual(data["recommendation_type"], rec.recommendation_type.name)
+        self.assertEqual(data["recommendation_type"], rec.recommendation_type.value)
         self.assertEqual(data["base_product_id"], rec.base_product_id)
         self.assertEqual(data["recommended_product_id"], rec.recommended_product_id)
-        self.assertEqual(data["status"], rec.status.name)
+        self.assertEqual(data["status"], rec.status.value)
         self.assertIn("created_at", data)
         self.assertIn("updated_at", data)
 
