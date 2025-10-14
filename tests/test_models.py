@@ -86,6 +86,27 @@ class TestYourResourceModel(TestCase):
         self.assertEqual(data.created_at, recommendation.created_at)
         self.assertEqual(data.updated_at, recommendation.updated_at)
 
+    # ==========================================================
+    # DELETE TESTS
+    # ==========================================================
+    def test_delete_a_recommendation(self):
+        """It should Delete a Recommendation"""
+        recommendation = RecommendationFactory()
+        recommendation.create()
+        self.assertEqual(len(Recommendation.all()), 1)
+        # delete the recommendation and make sure it isn't in the database
+        recommendation.delete()
+        self.assertEqual(len(Recommendation.all()), 0)
+
+    def test_delete_nonexistent_recommendation(self):
+        """It should not Delete a Recommendation that doesn't exist in database"""
+        recommendation = RecommendationFactory()
+        # Don't call create() - this recommendation has no id and isn't in the database
+        from werkzeug.exceptions import NotFound
+
+        with self.assertRaises(NotFound):
+            recommendation.delete()
+
     def test_serialize_recommendation(self):
         """It should serialize a Recommendation into a dictionary"""
         rec = RecommendationFactory()

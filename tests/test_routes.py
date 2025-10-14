@@ -94,7 +94,6 @@ class TestRecommendation(TestCase):
         return recommendations
 
     # ----------------------------------------------------------
-
     # TEST CREATE
     # ----------------------------------------------------------
 
@@ -144,10 +143,12 @@ class TestRecommendation(TestCase):
             test_recommendation.recommended_product_id,
         )
         self.assertEqual(new_recommendation["status"], test_recommendation.status.value)
-
+    
+  
     # ----------------------------------------------------------
     # TEST READ
     # ----------------------------------------------------------
+    
     def test_get_recommendation(self):
         """It should Get a single Recommendation"""
         # get the id of a recommendation
@@ -164,7 +165,8 @@ class TestRecommendation(TestCase):
         data = response.get_json()
         logging.debug("Response data = %s", data)
         self.assertIn("Not Found", data["message"])
-
+    
+  
     # ----------------------------------------------------------
     # TEST UPDATE
     # ----------------------------------------------------------
@@ -183,6 +185,26 @@ class TestRecommendation(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         updated_recommendation = response.get_json()
+   
+    # ==========================================================
+    # TEST DELETE
+    # ==========================================================
+    def test_delete_recommendation(self):
+        """It should Delete a Recommendation"""
+        test_recommendation = self._create_recommendations(1)[0]
+        response = self.client.delete(f"{BASE_URL}/{test_recommendation.id}")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(response.data), 0)
+        # make sure they are deleted
+        response = self.client.get(f"{BASE_URL}/{test_recommendation.id}")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_non_existing_recommendation(self):
+        """It should not Delete a Recommendation that doesn't exist"""
+        response = self.client.delete(f"{BASE_URL}/0")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        data = response.get_json()
+        self.assertIn("was not found", data["message"])
 
 
 ######################################################################

@@ -108,8 +108,8 @@ def create_recommendations():
         status.HTTP_201_CREATED,
         {"Location": location_url},
     )
-
-
+  
+  
 ######################################################################
 # UPDATE AN EXISTING PET
 ######################################################################
@@ -143,6 +143,39 @@ def update_recommendations(recommendation_id):
 
     app.logger.info("Recommendation with ID: %d updated.", recommendation.id)
     return jsonify(recommendation.serialize()), status.HTTP_200_OK
+
+  
+  
+  
+
+
+######################################################################
+# DELETE A RECOMMENDATION - YOUR RESPONSIBILITY STARTS HERE
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>", methods=["DELETE"])
+def delete_recommendations(recommendation_id):
+    """
+    Delete a Recommendation
+
+    This endpoint will delete a Recommendation based on the id specified in the path
+    """
+    app.logger.info(
+        "Request to Delete a recommendation with id [%s]", recommendation_id
+    )
+
+    # Attempt to find the Recommendation and abort if not found
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+
+    # Delete the Recommendation
+    recommendation.delete()
+    app.logger.info("Recommendation with ID: %d delete complete.", recommendation_id)
+
+    return "", status.HTTP_204_NO_CONTENT
 
 
 ######################################################################
