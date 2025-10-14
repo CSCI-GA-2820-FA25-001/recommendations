@@ -108,8 +108,8 @@ def create_recommendations():
         status.HTTP_201_CREATED,
         {"Location": location_url},
     )
-  
-  
+
+
 ######################################################################
 # UPDATE AN EXISTING PET
 ######################################################################
@@ -144,10 +144,6 @@ def update_recommendations(recommendation_id):
     app.logger.info("Recommendation with ID: %d updated.", recommendation.id)
     return jsonify(recommendation.serialize()), status.HTTP_200_OK
 
-  
-  
-  
-
 
 ######################################################################
 # DELETE A RECOMMENDATION - YOUR RESPONSIBILITY STARTS HERE
@@ -179,21 +175,8 @@ def delete_recommendations(recommendation_id):
 
 
 ######################################################################
-# Checks the ContentType of a request
+# LIST A RECOMMENDATION - YOUR RESPONSIBILITY STARTS HERE
 ######################################################################
-def check_content_type(content_type) -> None:
-    """Checks that the media type is correct"""
-    if "Content-Type" not in request.headers:
-        app.logger.error("No Content-Type specified.")
-        abort(
-            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            f"Content-Type must be {content_type}",
-        )
-
-    if request.headers["Content-Type"] == content_type:
-        return
-
-
 @app.route("/recommendations", methods=["GET"])
 def list_recommendations():
     """
@@ -256,4 +239,23 @@ def list_recommendations():
     return jsonify(results), status.HTTP_200_OK
 
 
-# Todo: Place your REST API code here ...
+######################################################################
+# Checks the ContentType of a request
+######################################################################
+def check_content_type(content_type) -> None:
+    """Checks that the media type is correct"""
+    if "Content-Type" not in request.headers:
+        app.logger.error("No Content-Type specified.")
+        abort(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            f"Content-Type must be {content_type}",
+        )
+
+    if request.headers["Content-Type"] == content_type:
+        return
+
+    app.logger.error("Invalid Content-Type: %s", request.headers["Content-Type"])
+    abort(
+        status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        f"Content-Type must be {content_type}",
+    )

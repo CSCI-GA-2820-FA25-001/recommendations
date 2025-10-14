@@ -24,8 +24,14 @@ import logging
 from unittest import TestCase
 from wsgi import app
 from service.common import status
-from service.models import db, Recommendation, RecommendationType, RecommendationStatus
-from tests.factories import RecommendationFactory
+from service.models import (
+    DataValidationError,
+    db,
+    Recommendation,
+    RecommendationType,
+    RecommendationStatus,
+)
+from .factories import RecommendationFactory
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
@@ -73,6 +79,151 @@ class TestRecommendation(TestCase):
         """It should call the home page"""
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    ############################################################
+    # Utility function to bulk create recommendations
+    ############################################################
+    def _create_recommendations(self, count: int = 1) -> list:
+        """Factory method to create recommendations in bulk"""
+        recommendations = []
+        for _ in range(count):
+            test_recommendation = RecommendationFactory()
+            response = self.client.post(BASE_URL, json=test_recommendation.serialize())
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_201_CREATED,
+                "Could not create test recommendation",
+            )
+            new_recommendation = response.get_json()
+            test_recommendation.id = new_recommendation["id"]
+            recommendations.append(test_recommendation)
+        return recommendations
+
+    # ----------------------------------------------------------
+    # TEST CREATE
+    # ----------------------------------------------------------
+
+    def test_create_recommendation(self):
+        """It should Create a new Recommendation"""
+        test_recommendation = RecommendationFactory()
+        logging.debug("Test Recommendation: %s", test_recommendation.serialize())
+        response = self.client.post(BASE_URL, json=test_recommendation.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Make sure location header is set
+        location = response.headers.get("Location", None)
+        self.assertIsNotNone(location)
+
+        # Check the data is correct
+        new_recommendation = response.get_json()
+        self.assertEqual(new_recommendation["id"], test_recommendation.id)
+        self.assertEqual(new_recommendation["name"], test_recommendation.name)
+        self.assertEqual(
+            new_recommendation["base_product_id"], test_recommendation.base_product_id
+        )
+        self.assertEqual(
+            new_recommendation["recommendation_type"],
+            test_recommendation.recommendation_type.value,
+        )
+        self.assertEqual(
+            new_recommendation["recommended_product_id"],
+            test_recommendation.recommended_product_id,
+        )
+        self.assertEqual(new_recommendation["status"], test_recommendation.status.value)
+
+        # Check that the location header was correct
+        response = self.client.get(location)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        new_recommendation = response.get_json()
+        self.assertEqual(new_recommendation["id"], test_recommendation.id)
+        self.assertEqual(new_recommendation["name"], test_recommendation.name)
+        self.assertEqual(
+            new_recommendation["base_product_id"], test_recommendation.base_product_id
+        )
+        self.assertEqual(
+            new_recommendation["recommendation_type"],
+            test_recommendation.recommendation_type.value,
+        )
+        self.assertEqual(
+            new_recommendation["recommended_product_id"],
+            test_recommendation.recommended_product_id,
+        )
+        self.assertEqual(new_recommendation["status"], test_recommendation.status.value)
+
+    # ----------------------------------------------------------
+    # TEST READ
+    # ----------------------------------------------------------
+
+    def test_get_recommendation(self):
+        """It should Get a single Recommendation"""
+        # get the id of a recommendation
+        test_recommendation = self._create_recommendations(1)[0]
+        response = self.client.get(f"{BASE_URL}/{test_recommendation.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(data["name"], test_recommendation.name)
+
+    def test_get_recommendation_not_found(self):
+        """It should not Get a Recommendation thats not found"""
+        response = self.client.get(f"{BASE_URL}/0")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        data = response.get_json()
+        logging.debug("Response data = %s", data)
+        self.assertIn("Not Found", data["message"])
+
+    # ----------------------------------------------------------
+    # TEST UPDATE
+    # ----------------------------------------------------------
+    def test_update_recommendation(self):
+        """It should Update an existing Recommendation"""
+        # Create a recommendation to update
+        test_recommendation = RecommendationFactory()
+        response = self.client.post(BASE_URL, json=test_recommendation.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Prepare the update payload
+        new_recommendation = response.get_json()
+        new_recommendation["name"] = "Updated Recommendation Name"
+        new_recommendation["status"] = "inactive"
+
+        # Send PUT request to update
+        response = self.client.put(
+            f"{BASE_URL}/{new_recommendation['id']}", json=new_recommendation
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        updated_recommendation = response.get_json()
+        self.assertEqual(updated_recommendation["id"], new_recommendation["id"])
+        self.assertEqual(updated_recommendation["name"], "Updated Recommendation Name")
+        self.assertEqual(updated_recommendation["status"], "inactive")
+
+        get_response = self.client.get(f"{BASE_URL}/{new_recommendation['id']}")
+        self.assertEqual(get_response.status_code, status.HTTP_200_OK)
+        fetched = get_response.get_json()
+        self.assertEqual(fetched["name"], "Updated Recommendation Name")
+
+    # ==========================================================
+    # TEST DELETE
+    # ==========================================================
+    def test_delete_recommendation(self):
+        """It should Delete a Recommendation"""
+        test_recommendation = self._create_recommendations(1)[0]
+        response = self.client.delete(f"{BASE_URL}/{test_recommendation.id}")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(response.data), 0)
+        # make sure they are deleted
+        response = self.client.get(f"{BASE_URL}/{test_recommendation.id}")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_nonexistent_recommendation(self):
+        """It should raise DataValidationError when deleting a non-persisted Recommendation"""
+        # Create a recommendation that is NOT saved to the database
+        recommendation = RecommendationFactory()
+
+        # Attempting to delete should raise DataValidationError,
+        # because SQLAlchemy will complain that the instance is not persisted
+        with self.assertRaises(DataValidationError):
+            recommendation.delete()
 
     ######################################################################
     #  L I S T   R E C O M M E N D A T I O N S   T E S T S
@@ -153,16 +304,12 @@ class TestRecommendation(TestCase):
         """It should list recommendations filtered by status"""
         # Create recommendations with ACTIVE status
         for _ in range(4):
-            recommendation = RecommendationFactory(
-                status=RecommendationStatus.ACTIVE
-            )
+            recommendation = RecommendationFactory(status=RecommendationStatus.ACTIVE)
             recommendation.create()
 
         # Create recommendations with different status
         for _ in range(2):
-            recommendation = RecommendationFactory(
-                status=RecommendationStatus.INACTIVE
-            )
+            recommendation = RecommendationFactory(status=RecommendationStatus.INACTIVE)
             recommendation.create()
 
         # Query by status
@@ -257,4 +404,77 @@ class TestRecommendation(TestCase):
         self.assertIsInstance(data, list)
         self.assertEqual(len(data), 0)
 
-    # Todo: Add your test cases here...
+
+######################################################################
+#  T E S T   S A D   P A T H S
+######################################################################
+class TestSadPaths(TestCase):
+    """Test REST Exception Handling"""
+
+    def setUp(self):
+        """Runs before each test"""
+        self.client = app.test_client()
+
+    def test_method_not_allowed(self):
+        """It should not allow update without a recommendation id"""
+        response = self.client.put(BASE_URL)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_create_recommendation_no_data(self):
+        """It should not Create a Recommendation with missing data"""
+        response = self.client.post(BASE_URL, json={})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_recommendation_no_content_type(self):
+        """It should not Create a Recommendation with no content type"""
+        response = self.client.post(BASE_URL)
+        self.assertEqual(response.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+    def test_create_recommendation_wrong_content_type(self):
+        """It should not Create a Recommendation with the wrong content type"""
+        response = self.client.post(BASE_URL, data="hello", content_type="text/html")
+        self.assertEqual(response.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+    def test_create_recommendation_bad_recommendation_type(self):
+        """It should not Create a Recommendation with bad recommendation type"""
+        bad_data = {
+            "name": "Invalid Rec Type",
+            "recommendation_type": 123,  # intentionally invalid type (not string)
+            "base_product_id": 1,
+            "recommended_product_id": 2,
+            "status": "active",
+        }
+
+        response = self.client.post(BASE_URL, json=bad_data)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        body = response.get_json()
+        self.assertIn("Invalid data", body["message"])
+
+    def test_create_recommendation_bad_status(self):
+        """It should not Create a Recommendation with bad status data"""
+        recommendation = RecommendationFactory()
+        logging.debug(recommendation)
+        # change status to a bad string
+        test_recommendation = recommendation.serialize()
+        test_recommendation["status"] = "long"
+        response = self.client.post(BASE_URL, json=test_recommendation)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_update_recommendation_not_found(self):
+        """It should not Update a Recommendation that does not exist"""
+        # Create a dummy update payload
+        update_data = {
+            "name": "Nonexistent Recommendation",
+            "recommendation_type": "cross_sell",
+            "base_product_id": 1,
+            "recommended_product_id": 2,
+            "status": "active",
+        }
+
+        # Try updating a recommendation that doesn't exist (ID = 999)
+        response = self.client.put(f"{BASE_URL}/999", json=update_data)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        body = response.get_json()
+        self.assertIn("not found", body["message"].lower())
