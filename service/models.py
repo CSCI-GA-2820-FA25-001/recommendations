@@ -34,7 +34,6 @@ class RecommendationStatus(Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
     DRAFT = "draft"
-    DELETED = "deleted"
 
 
 class Recommendation(db.Model):
