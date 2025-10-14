@@ -95,7 +95,6 @@ class Recommendation(db.Model):
         try:
             db.session.delete(self)
             db.session.commit()
-            self.id = None
         except Exception as e:
             db.session.rollback()
             logger.error("Error deleting record: %s", self)
