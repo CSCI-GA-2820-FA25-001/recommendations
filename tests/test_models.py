@@ -15,7 +15,7 @@
 ######################################################################
 
 """
-Test cases for Pet Model
+Test cases for Recommendation Model
 """
 
 # pylint: disable=duplicate-code
@@ -115,10 +115,10 @@ class TestYourResourceModel(TestCase):
         self.assertIsInstance(data, dict)
         self.assertEqual(data["id"], rec.id)
         self.assertEqual(data["name"], rec.name)
-        self.assertEqual(data["recommendation_type"], rec.recommendation_type.name)
+        self.assertEqual(data["recommendation_type"], rec.recommendation_type.value)
         self.assertEqual(data["base_product_id"], rec.base_product_id)
         self.assertEqual(data["recommended_product_id"], rec.recommended_product_id)
-        self.assertEqual(data["status"], rec.status.name)
+        self.assertEqual(data["status"], rec.status.value)
         self.assertIn("created_at", data)
         self.assertIn("updated_at", data)
 
@@ -264,3 +264,40 @@ class TestYourResourceModel(TestCase):
         )
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].name, "Alpha")
+
+    def test_read_a_recommendation(self):
+        """It should Read a Recommendation"""
+        recommendation = RecommendationFactory()
+        logging.debug(recommendation)
+        recommendation.id = None
+        recommendation.create()
+        self.assertIsNotNone(recommendation.id)
+        # Fetch it back
+        found_recommendation = Recommendation.find(recommendation.id)
+        self.assertEqual(found_recommendation.id, recommendation.id)
+        self.assertEqual(found_recommendation.name, recommendation.name)
+        self.assertEqual(
+            found_recommendation.base_product_id, recommendation.base_product_id
+        )
+        self.assertEqual(
+            found_recommendation.recommended_product_id,
+            recommendation.recommended_product_id,
+        )
+
+    def test_update_a_recommendation(self):
+        """It should Update a Recommendation"""
+        recommendation = RecommendationFactory()
+        logging.debug(recommendation)
+        recommendation.id = None
+        recommendation.create()
+        logging.debug(recommendation)
+        self.assertIsNotNone(recommendation.id)
+        # Change it and save it
+        original_id = recommendation.id
+        recommendation.update()
+        self.assertEqual(recommendation.id, original_id)
+        # Fetch it back and make sure the id hasn't changed
+        # but the data did change
+        recommendations = Recommendation.all()
+        self.assertEqual(len(recommendations), 1)
+        self.assertEqual(recommendations[0].id, original_id)

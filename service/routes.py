@@ -56,6 +56,25 @@ def index():
 ######################################################################
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
+######################################################################
+# READ A Recommendation
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>", methods=["GET"])
+def get_recommendations(recommendation_id):
+    """
+    Retrieve a single Recommendation by ID
+    This endpoint will return a Recommendation based on its ID
+    """
+    app.logger.info("Request for Recommendation with id: %s", recommendation_id)
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id {recommendation_id} not found",
+        )
+
+    app.logger.info("Returning recommendation: %s", recommendation.name)
+    return jsonify(recommendation.serialize()), status.HTTP_200_OK
 
 
 ######################################################################
@@ -89,6 +108,45 @@ def create_recommendations():
         status.HTTP_201_CREATED,
         {"Location": location_url},
     )
+  
+  
+######################################################################
+# UPDATE AN EXISTING PET
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>", methods=["PUT"])
+def update_recommendations(recommendation_id):
+    """
+    Update a Recommendation
+
+    This endpoint will update a Recommendation based the body that is posted
+    """
+    app.logger.info(
+        "Request to Update a recommendation with id [%s]", recommendation_id
+    )
+    check_content_type("application/json")
+
+    # Attempt to find the Recommendation and abort if not found
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+
+    # Update the Recommendation with the new data
+    data = request.get_json()
+    app.logger.info("Processing: %s", data)
+    recommendation.deserialize(data)
+
+    # Save the updates to the database
+    recommendation.update()
+
+    app.logger.info("Recommendation with ID: %d updated.", recommendation.id)
+    return jsonify(recommendation.serialize()), status.HTTP_200_OK
+
+  
+  
+  
 
 
 ######################################################################
@@ -120,9 +178,6 @@ def delete_recommendations(recommendation_id):
     return "", status.HTTP_204_NO_CONTENT
 
 
-######################################################################
-# DELETE A RECOMMENDATION - YOUR RESPONSIBILITY ENDS HERE
-######################################################################
 ######################################################################
 # Checks the ContentType of a request
 ######################################################################
