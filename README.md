@@ -1,15 +1,13 @@
-# NYU DevOps Project Template
+# Recommendations Service
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python](https://img.shields.io/badge/Language-Python-blue.svg)](https://python.org/)
 
-This is a skeleton you can use to start your projects.
-
-**Note:** _Feel free to overwrite this `README.md` file with the one that describes your project._
+This is the Recommendations microservice for the NYU DevOps Fall 2025 eCommerce project.
 
 ## Overview
 
-This project template contains starter code for your class project. The `/service` folder contains your `models.py` file for your model and a `routes.py` file for your service. The `/tests` folder has test case starter code for testing the model and the service separately. All you need to do is add your functionality. You can use the [lab-flask-tdd](https://github.com/nyu-devops/lab-flask-tdd) for code examples to copy from.
+The Recommendations service manages product-to-product relationships to provide intelligent product suggestions to customers. It supports creating, reading, updating, deleting, and listing recommendation relationships between products.
 
 ## Automatic Setup
 
@@ -58,6 +56,80 @@ tests/                     - test cases package
 ├── test_cli_commands.py   - test suite for the CLI
 ├── test_models.py         - test suite for business models
 └── test_routes.py         - test suite for service routes
+```
+
+## API Endpoints
+
+### List Recommendations
+
+Retrieve a list of all recommendations, optionally filtered by query parameters.
+
+**Endpoint:** `GET /recommendations`
+
+**Query Parameters:**
+- `product_a_id` (integer, optional): Filter by base product ID
+- `relationship_type` (string, optional): Filter by relationship type. Valid values:
+  - `cross_sell`
+  - `up_sell`
+  - `accessory`
+  - `trending`
+- `status` (string, optional): Filter by status. Valid values:
+  - `active`
+  - `inactive`
+  - `draft`
+
+**Success Response:**
+- **Code:** 200 OK
+- **Content:** JSON array of recommendation objects
+
+**Example Requests:**
+
+```bash
+# Get all recommendations
+curl -X GET "http://localhost:8080/recommendations"
+
+# Filter by product ID
+curl -X GET "http://localhost:8080/recommendations?product_a_id=101"
+
+# Filter by relationship type
+curl -X GET "http://localhost:8080/recommendations?relationship_type=accessory"
+
+# Filter by status
+curl -X GET "http://localhost:8080/recommendations?status=active"
+
+# Multiple filters
+curl -X GET "http://localhost:8080/recommendations?product_a_id=101&relationship_type=accessory&status=active"
+```
+
+**Example Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "name": "iPhone to AirPods",
+    "recommendation_type": "accessory",
+    "base_product_id": 101,
+    "recommended_product_id": 202,
+    "status": "active",
+    "created_at": "2025-10-13T00:00:00",
+    "updated_at": "2025-10-13T00:00:00"
+  }
+]
+```
+
+## Running Tests
+
+To run the test suite:
+
+```bash
+make test
+```
+
+To run linting:
+
+```bash
+make lint
 ```
 
 ## License
