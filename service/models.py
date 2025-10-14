@@ -1,10 +1,12 @@
 """
-Models for YourResourceModel
+Models for Recommendation
 
 All of the models are stored in this module
 """
 
 import logging
+from datetime import datetime
+from enum import Enum
 from flask_sqlalchemy import SQLAlchemy
 
 logger = logging.getLogger("flask.app")
@@ -17,7 +19,24 @@ class DataValidationError(Exception):
     """Used for an data validation errors when deserializing"""
 
 
-class YourResourceModel(db.Model):
+class RecommendationType(Enum):
+    """Enumeration of possible recommendation types"""
+
+    CROSS_SELL = "cross_sell"
+    UP_SELL = "up_sell"
+    ACCESSORY = "accessory"
+    TRENDING = "trending"
+
+
+class RecommendationStatus(Enum):
+    """Enumeration of possible recommendation statuses"""
+
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    DRAFT = "draft"
+
+
+class Recommendation(db.Model):
     """
     Class that represents a YourResourceModel
     """
@@ -26,16 +45,27 @@ class YourResourceModel(db.Model):
     # Table Schema
     ##################################################
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(63))
+    name = db.Column(db.String(63), nullable=False)
 
-    # Todo: Place the rest of your schema here...
+    base_product_id = db.Column(db.Integer, nullable=False)
+    recommended_product_id = db.Column(db.Integer, nullable=False)
+    status = db.Column(
+        db.Enum(RecommendationStatus), default=RecommendationStatus.DRAFT
+    )
+    recommendation_type = db.Column(db.Enum(RecommendationType), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now)
 
     def __repr__(self):
-        return f"<YourResourceModel {self.name} id=[{self.id}]>"
+        return (
+            f"<Recommendation {self.id}: "
+            f" {self.base_product_id} -> {self.recommended_product_id}"
+            f" ({self.recommendation_type.value})>"
+        )
 
     def create(self):
         """
-        Creates a YourResourceModel to the database
+        Creates a recommendation to the database
         """
         logger.info("Creating %s", self.name)
         self.id = None  # pylint: disable=invalid-name
@@ -60,7 +90,7 @@ class YourResourceModel(db.Model):
             raise DataValidationError(e) from e
 
     def delete(self):
-        """Removes a YourResourceModel from the data store"""
+        """Removes a recommendation from the data store"""
         logger.info("Deleting %s", self.name)
         try:
             db.session.delete(self)
@@ -71,29 +101,36 @@ class YourResourceModel(db.Model):
             raise DataValidationError(e) from e
 
     def serialize(self):
-        """Serializes a YourResourceModel into a dictionary"""
-        return {"id": self.id, "name": self.name}
+        """Serializes a Recommendation into a dictionary"""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "recommendation_type": self.recommendation_type.value,
+            "base_product_id": self.base_product_id,
+            "recommended_product_id": self.recommended_product_id,
+            "status": self.status.value,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
 
-    def deserialize(self, data):
-        """
-        Deserializes a YourResourceModel from a dictionary
-
-        Args:
-            data (dict): A dictionary containing the resource data
-        """
+    def deserialize(self, data: dict):
+        """Deserializes a Recommendation from a dictionary"""
         try:
             self.name = data["name"]
-        except AttributeError as error:
-            raise DataValidationError("Invalid attribute: " + error.args[0]) from error
+            self.recommendation_type = RecommendationType(data["recommendation_type"])
+            self.base_product_id = data["base_product_id"]
+            self.recommended_product_id = data["recommended_product_id"]
+            self.status = RecommendationStatus(data["status"])
+            self.created_at = data.get("created_at")
+            self.updated_at = data.get("updated_at")
+
         except KeyError as error:
             raise DataValidationError(
-                "Invalid YourResourceModel: missing " + error.args[0]
+                f"Missing required field: {error.args[0]}"
             ) from error
-        except TypeError as error:
-            raise DataValidationError(
-                "Invalid YourResourceModel: body of request contained bad or no data "
-                + str(error)
-            ) from error
+        except (ValueError, TypeError) as error:
+            raise DataValidationError(f"Invalid data: {error}") from error
+
         return self
 
     ##################################################
@@ -102,8 +139,8 @@ class YourResourceModel(db.Model):
 
     @classmethod
     def all(cls):
-        """Returns all of the YourResourceModels in the database"""
-        logger.info("Processing all YourResourceModels")
+        """Returns all of the recommendation in the database"""
+        logger.info("Processing all recommendations")
         return cls.query.all()
 
     @classmethod

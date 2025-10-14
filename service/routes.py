@@ -15,15 +15,15 @@
 ######################################################################
 
 """
-YourResourceModel Service
+Recommendations Service
 
-This service implements a REST API that allows you to Create, Read, Update
-and Delete YourResourceModel
+This service implements a REST API that allows you to Create, Read, Update,
+Delete, and List Recommendations.
 """
 
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
-from service.models import YourResourceModel
+from service.models import Recommendation
 from service.common import status  # HTTP Status Codes
 
 
@@ -33,10 +33,24 @@ from service.common import status  # HTTP Status Codes
 @app.route("/")
 def index():
     """Root URL response"""
-    return (
-        "Reminder: return some useful information in json format about the service here",
-        status.HTTP_200_OK,
-    )
+    info = {
+        "service": "Recommendations Service",
+        "version": "1.0",
+        "description": (
+            "This microservice manages product-to-product recommendations "
+            "for the eCommerce platform. It supports Create, Read, Update, "
+            "Delete, and List operations for recommendation relationships."
+        ),
+        "endpoints": {
+            "list": "/recommendations",
+            "create": "/recommendations",
+            "read": "/recommendations/<id>",
+            "update": "/recommendations/<id>",
+            "delete": "/recommendations/<id>",
+        },
+        "status": "OK",
+    }
+    return jsonify(info), status.HTTP_200_OK
 
 
 ######################################################################
