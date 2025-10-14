@@ -15,7 +15,7 @@
 ######################################################################
 
 """
-TestYourResourceModel API Service Test Suite
+Recommendation API Service Test Suite
 """
 
 # pylint: disable=duplicate-code
@@ -30,13 +30,14 @@ from tests.factories import RecommendationFactory
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
 )
+BASE_URL = "/recommendations"
 
 
 ######################################################################
 #  T E S T   C A S E S
 ######################################################################
 # pylint: disable=too-many-public-methods
-class TestYourResourceService(TestCase):
+class TestRecommendation(TestCase):
     """REST API Server Tests"""
 
     @classmethod

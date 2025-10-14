@@ -56,6 +56,142 @@ def index():
 ######################################################################
 #  R E S T   A P I   E N D P O I N T S
 ######################################################################
+######################################################################
+# READ A Recommendation
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>", methods=["GET"])
+def get_recommendations(recommendation_id):
+    """
+    Retrieve a single Recommendation by ID
+    This endpoint will return a Recommendation based on its ID
+    """
+    app.logger.info("Request for Recommendation with id: %s", recommendation_id)
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id {recommendation_id} not found",
+        )
+
+    app.logger.info("Returning recommendation: %s", recommendation.name)
+    return jsonify(recommendation.serialize()), status.HTTP_200_OK
+
+
+######################################################################
+# CREATE A NEW Recommendation
+######################################################################
+@app.route("/recommendations", methods=["POST"])
+def create_recommendations():
+    """
+    Create a Recommendation
+    This endpoint will create a Recommendation based the data in the body that is posted
+    """
+    app.logger.info("Request to Create a Recommendation...")
+    check_content_type("application/json")
+
+    recommendation = Recommendation()
+    # Get the data from the request and deserialize it
+    data = request.get_json()
+    app.logger.info("Processing: %s", data)
+    recommendation.deserialize(data)
+
+    # Save the new Recommendation to the database
+    recommendation.create()
+    app.logger.info("Recommendation with new id [%s] saved!", recommendation.id)
+
+    # Return the location of the new Recommendation
+    location_url = url_for(
+        "get_recommendations", recommendation_id=recommendation.id, _external=True
+    )
+    return (
+        jsonify(recommendation.serialize()),
+        status.HTTP_201_CREATED,
+        {"Location": location_url},
+    )
+  
+  
+######################################################################
+# UPDATE AN EXISTING PET
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>", methods=["PUT"])
+def update_recommendations(recommendation_id):
+    """
+    Update a Recommendation
+
+    This endpoint will update a Recommendation based the body that is posted
+    """
+    app.logger.info(
+        "Request to Update a recommendation with id [%s]", recommendation_id
+    )
+    check_content_type("application/json")
+
+    # Attempt to find the Recommendation and abort if not found
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+
+    # Update the Recommendation with the new data
+    data = request.get_json()
+    app.logger.info("Processing: %s", data)
+    recommendation.deserialize(data)
+
+    # Save the updates to the database
+    recommendation.update()
+
+    app.logger.info("Recommendation with ID: %d updated.", recommendation.id)
+    return jsonify(recommendation.serialize()), status.HTTP_200_OK
+
+  
+  
+  
+
+
+######################################################################
+# DELETE A RECOMMENDATION - YOUR RESPONSIBILITY STARTS HERE
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>", methods=["DELETE"])
+def delete_recommendations(recommendation_id):
+    """
+    Delete a Recommendation
+
+    This endpoint will delete a Recommendation based on the id specified in the path
+    """
+    app.logger.info(
+        "Request to Delete a recommendation with id [%s]", recommendation_id
+    )
+
+    # Attempt to find the Recommendation and abort if not found
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+
+    # Delete the Recommendation
+    recommendation.delete()
+    app.logger.info("Recommendation with ID: %d delete complete.", recommendation_id)
+
+    return "", status.HTTP_204_NO_CONTENT
+
+
+######################################################################
+# Checks the ContentType of a request
+######################################################################
+def check_content_type(content_type) -> None:
+    """Checks that the media type is correct"""
+    if "Content-Type" not in request.headers:
+        app.logger.error("No Content-Type specified.")
+        abort(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            f"Content-Type must be {content_type}",
+        )
+
+    if request.headers["Content-Type"] == content_type:
+        return
 
 
 @app.route("/recommendations", methods=["GET"])
