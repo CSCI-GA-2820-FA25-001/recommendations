@@ -76,57 +76,55 @@ class TestRecommendation(TestCase):
 
     # ----------------------------------------------------------
 
+    # TEST CREATE
+    # ----------------------------------------------------------
 
-# TEST CREATE
-# ----------------------------------------------------------
+    def test_create_recommendation(self):
+        """It should Create a new Recommendation"""
+        test_recommendation = RecommendationFactory()
+        logging.debug("Test Recommendation: %s", test_recommendation.serialize())
+        response = self.client.post(BASE_URL, json=test_recommendation.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+        # Make sure location header is set
+        location = response.headers.get("Location", None)
+        self.assertIsNotNone(location)
 
-def test_create_recommendation(self):
-    """It should Create a new Recommendation"""
-    test_recommendation = RecommendationFactory()
-    logging.debug("Test Recommendation: %s", test_recommendation.serialize())
-    response = self.client.post(BASE_URL, json=test_recommendation.serialize())
-    self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # Check the data is correct
+        new_recommendation = response.get_json()
+        self.assertEqual(new_recommendation["id"], test_recommendation.id)
+        self.assertEqual(new_recommendation["name"], test_recommendation.name)
+        self.assertEqual(
+            new_recommendation["base_product_id"], test_recommendation.base_product_id
+        )
+        self.assertEqual(
+            new_recommendation["recommendation_type"],
+            test_recommendation.recommendation_type.value,
+        )
+        self.assertEqual(
+            new_recommendation["recommended_product_id"],
+            test_recommendation.recommended_product_id,
+        )
+        self.assertEqual(new_recommendation["status"], test_recommendation.status.value)
 
-    # Make sure location header is set
-    location = response.headers.get("Location", None)
-    self.assertIsNotNone(location)
-
-    # Check the data is correct
-    new_recommendation = response.get_json()
-    self.assertEqual(new_recommendation["id"], test_recommendation.id)
-    self.assertEqual(new_recommendation["name"], test_recommendation.name)
-    self.assertEqual(
-        new_recommendation["base_product_id"], test_recommendation.base_product_id
-    )
-    self.assertEqual(
-        new_recommendation["recommendation_type"],
-        test_recommendation.recommendation_type,
-    )
-    self.assertEqual(
-        new_recommendation["recommended_product_id"],
-        test_recommendation.recommended_product_id,
-    )
-    self.assertEqual(new_recommendation["status"], test_recommendation.status)
-
-    # Check that the location header was correct
-    response = self.client.get(location)
-    self.assertEqual(response.status_code, status.HTTP_200_OK)
-    new_recommendation = response.get_json()
-    self.assertEqual(new_recommendation["id"], test_recommendation.id)
-    self.assertEqual(new_recommendation["name"], test_recommendation.name)
-    self.assertEqual(
-        new_recommendation["base_product_id"], test_recommendation.base_product_id
-    )
-    self.assertEqual(
-        new_recommendation["recommendation_type"],
-        test_recommendation.recommendation_type,
-    )
-    self.assertEqual(
-        new_recommendation["recommended_product_id"],
-        test_recommendation.recommended_product_id,
-    )
-    self.assertEqual(new_recommendation["status"], test_recommendation.status)
+        # Check that the location header was correct
+        response = self.client.get(location)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        new_recommendation = response.get_json()
+        self.assertEqual(new_recommendation["id"], test_recommendation.id)
+        self.assertEqual(new_recommendation["name"], test_recommendation.name)
+        self.assertEqual(
+            new_recommendation["base_product_id"], test_recommendation.base_product_id
+        )
+        self.assertEqual(
+            new_recommendation["recommendation_type"],
+            test_recommendation.recommendation_type.value,
+        )
+        self.assertEqual(
+            new_recommendation["recommended_product_id"],
+            test_recommendation.recommended_product_id,
+        )
+        self.assertEqual(new_recommendation["status"], test_recommendation.status.value)
 
 
 ######################################################################
@@ -161,12 +159,19 @@ class TestSadPaths(TestCase):
 
     def test_create_recommendation_bad_recommendation_type(self):
         """It should not Create a Recommendation with bad recommendation type"""
-        test_recommendation = RecommendationFactory()
-        logging.debug(test_recommendation)
-        # change relationship type to a bad integer
-        test_recommendation.recommendation_type = 123
-        response = self.client.post(BASE_URL, json=test_recommendation.serialize())
+        bad_data = {
+            "name": "Invalid Rec Type",
+            "recommendation_type": 123,  # intentionally invalid type (not string)
+            "base_product_id": 1,
+            "recommended_product_id": 2,
+            "status": "active",
+        }
+
+        response = self.client.post(BASE_URL, json=bad_data)
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        body = response.get_json()
+        self.assertIn("Invalid data", body["message"])
 
     def test_create_recommendation_bad_status(self):
         """It should not Create a Recommendation with bad status data"""

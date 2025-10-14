@@ -105,10 +105,10 @@ class Recommendation(db.Model):
         return {
             "id": self.id,
             "name": self.name,
-            "recommendation_type": self.recommendation_type.name,
+            "recommendation_type": self.recommendation_type.value,
             "base_product_id": self.base_product_id,
             "recommended_product_id": self.recommended_product_id,
-            "status": self.status.name,
+            "status": self.status.value,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
