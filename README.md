@@ -9,7 +9,7 @@ This is the Recommendations microservice for the NYU DevOps Fall 2025 eCommerce 
 
 The Recommendations service manages product-to-product relationships to provide intelligent product suggestions to customers. It implements a REST API that supports __creating__, __reading__, __updating__, __deleting__, and __listing__ recommendation relationships between products.
 
-The `/service' folder contains files for the database model and the service. The `/test` file separately contains files for testing the model and the service.
+The `/service` folder contains files for the database model and the service. The `/test` file separately contains files for testing the model and the service.
 
 All API endpoints in this service return __JOSN__-formatted responses, including those error messages.
 
@@ -56,9 +56,9 @@ Method | Endpoint | Description | Response
 --- | --- | --- | ---
 GET | /recommendations | List all recommendations | 200_OK
 POST | /recommendations | Create a new recommendation | 201_CREATED
-GET | /recommendations/<id> | Read a specific recommendation | 200_OK
-PUT | /rexommendations/<id> | Update an existing recommendation | 200_OK
-DELETE | /recommendations/<id> | Delete a recommendation | 204_NO_CONTENT
+GET | /recommendations/id | Read a specific recommendation | 200_OK
+PUT | /rexommendations/id | Update an existing recommendation | 200_OK
+DELETE | /recommendations/id | Delete a recommendation | 204_NO_CONTENT
 
 ## Recommendation Examples
 ```json
