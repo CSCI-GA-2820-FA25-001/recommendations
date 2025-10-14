@@ -92,6 +92,38 @@ def create_recommendations():
 
 
 ######################################################################
+# DELETE A RECOMMENDATION - YOUR RESPONSIBILITY STARTS HERE
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>", methods=["DELETE"])
+def delete_recommendations(recommendation_id):
+    """
+    Delete a Recommendation
+
+    This endpoint will delete a Recommendation based on the id specified in the path
+    """
+    app.logger.info(
+        "Request to Delete a recommendation with id [%s]", recommendation_id
+    )
+
+    # Attempt to find the Recommendation and abort if not found
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+
+    # Delete the Recommendation
+    recommendation.delete()
+    app.logger.info("Recommendation with ID: %d delete complete.", recommendation_id)
+
+    return "", status.HTTP_204_NO_CONTENT
+
+
+######################################################################
+# DELETE A RECOMMENDATION - YOUR RESPONSIBILITY ENDS HERE
+######################################################################
+######################################################################
 # Checks the ContentType of a request
 ######################################################################
 def check_content_type(content_type) -> None:

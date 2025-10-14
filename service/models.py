@@ -92,9 +92,14 @@ class Recommendation(db.Model):
     def delete(self):
         """Removes a recommendation from the data store"""
         logger.info("Deleting %s", self.name)
+        if not self.id:
+            from werkzeug.exceptions import NotFound
+
+            raise NotFound("Recommendation not found - cannot delete")
         try:
             db.session.delete(self)
             db.session.commit()
+            self.id = None
         except Exception as e:
             db.session.rollback()
             logger.error("Error deleting record: %s", self)
@@ -102,13 +107,17 @@ class Recommendation(db.Model):
 
     def serialize(self):
         """Serializes a Recommendation into a dictionary"""
+
+        def get_enum_name(value):
+            return value.name if hasattr(value, "name") else value
+
         return {
             "id": self.id,
             "name": self.name,
-            "recommendation_type": self.recommendation_type.name,
+            "recommendation_type": get_enum_name(self.recommendation_type),
             "base_product_id": self.base_product_id,
             "recommended_product_id": self.recommended_product_id,
-            "status": self.status.name,
+            "status": get_enum_name(self.status),
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
