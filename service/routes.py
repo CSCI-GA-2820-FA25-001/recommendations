@@ -183,13 +183,17 @@ def list_recommendations():
     List all Recommendations
 
     This endpoint returns a list of all Recommendations in the database.
-    Query parameters can be used to filter the results:
+    Query parameters can be used to filter, paginate, and sort the results:
     - product_a_id: Filter by base product ID
     - relationship_type: Filter by recommendation type (e.g., 'accessory', 'cross_sell')
     - status: Filter by status (e.g., 'active', 'inactive')
+    - limit: Number of results to return (default 20, max 100)
+    - offset: Number of results to skip (default 0)
+    - sort: Sort order (e.g., 'created_at_asc', 'created_at_desc', 'name_asc', 'name_desc')
 
     Returns:
-        200: A JSON array of recommendations (may be empty)
+        200: A JSON object with recommendations array and pagination metadata
+        400: Bad request if invalid parameters provided
     """
     app.logger.info("Request to list recommendations")
 
@@ -231,12 +235,70 @@ def list_recommendations():
                 "Invalid status value: %s. Ignoring filter.", status_param
             )
 
-    # Execute query and serialize results
-    recommendations = query.all()
-    app.logger.info("Found %d recommendations", len(recommendations))
+    # Pagination parameters
+    limit = request.args.get("limit", default=20, type=int)
+    offset = request.args.get("offset", default=0, type=int)
 
+    # Validate pagination parameters
+    if limit < 1 or limit > 100:
+        abort(
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid limit parameter. Must be between 1 and 100.",
+        )
+    if offset < 0:
+        abort(
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid offset parameter. Must be non-negative.",
+        )
+
+    # Sorting parameter
+    sort_param = request.args.get("sort")
+    valid_sort_fields = {
+        "created_at_asc": Recommendation.created_at.asc(),
+        "created_at_desc": Recommendation.created_at.desc(),
+        "name_asc": Recommendation.name.asc(),
+        "name_desc": Recommendation.name.desc(),
+        "id_asc": Recommendation.id.asc(),
+        "id_desc": Recommendation.id.desc(),
+    }
+
+    if sort_param:
+        if sort_param not in valid_sort_fields:
+            abort(
+                status.HTTP_400_BAD_REQUEST,
+                f"Invalid sort parameter. Valid options: {', '.join(valid_sort_fields.keys())}",
+            )
+        app.logger.info("Sorting by: %s", sort_param)
+        query = query.order_by(valid_sort_fields[sort_param])
+    else:
+        # Default sort by id
+        query = query.order_by(Recommendation.id.asc())
+
+    # Get total count before pagination
+    total_count = query.count()
+
+    # Apply pagination
+    recommendations = query.limit(limit).offset(offset).all()
+    app.logger.info(
+        "Found %d recommendations (total: %d, limit: %d, offset: %d)",
+        len(recommendations),
+        total_count,
+        limit,
+        offset,
+    )
+
+    # Build response with metadata
     results = [rec.serialize() for rec in recommendations]
-    return jsonify(results), status.HTTP_200_OK
+    response = {
+        "recommendations": results,
+        "meta": {
+            "total": total_count,
+            "limit": limit,
+            "offset": offset,
+            "count": len(results),
+        },
+    }
+    return jsonify(response), status.HTTP_200_OK
 
 
 ######################################################################
