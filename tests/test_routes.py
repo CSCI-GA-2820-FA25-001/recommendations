@@ -241,8 +241,11 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
-        self.assertIsInstance(data, list)
-        self.assertEqual(len(data), 5)
+        self.assertIn("recommendations", data)
+        self.assertIn("meta", data)
+        self.assertEqual(len(data["recommendations"]), 5)
+        self.assertEqual(data["meta"]["total"], 5)
+        self.assertEqual(data["meta"]["count"], 5)
 
     def test_list_recommendations_empty(self):
         """It should return an empty list when no recommendations exist"""
@@ -250,8 +253,9 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
-        self.assertIsInstance(data, list)
-        self.assertEqual(len(data), 0)
+        self.assertIn("recommendations", data)
+        self.assertEqual(len(data["recommendations"]), 0)
+        self.assertEqual(data["meta"]["total"], 0)
 
     def test_list_recommendations_by_product_a_id(self):
         """It should list recommendations filtered by product_a_id"""
@@ -271,8 +275,8 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
-        self.assertEqual(len(data), 3)
-        for rec in data:
+        self.assertEqual(len(data["recommendations"]), 3)
+        for rec in data["recommendations"]:
             self.assertEqual(rec["base_product_id"], target_product_id)
 
     def test_list_recommendations_by_relationship_type(self):
@@ -296,8 +300,8 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
-        self.assertEqual(len(data), 3)
-        for rec in data:
+        self.assertEqual(len(data["recommendations"]), 3)
+        for rec in data["recommendations"]:
             self.assertEqual(rec["recommendation_type"], "accessory")
 
     def test_list_recommendations_by_status(self):
@@ -317,8 +321,8 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
-        self.assertEqual(len(data), 4)
-        for rec in data:
+        self.assertEqual(len(data["recommendations"]), 4)
+        for rec in data["recommendations"]:
             self.assertEqual(rec["status"], "active")
 
     def test_list_recommendations_with_multiple_filters(self):
@@ -353,8 +357,8 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
-        self.assertEqual(len(data), 2)
-        for rec in data:
+        self.assertEqual(len(data["recommendations"]), 2)
+        for rec in data["recommendations"]:
             self.assertEqual(rec["base_product_id"], target_product_id)
             self.assertEqual(rec["recommendation_type"], "accessory")
             self.assertEqual(rec["status"], "active")
@@ -372,7 +376,7 @@ class TestRecommendation(TestCase):
 
         data = resp.get_json()
         # Invalid enum value should be ignored, return all records
-        self.assertEqual(len(data), 3)
+        self.assertEqual(len(data["recommendations"]), 3)
 
     def test_list_recommendations_invalid_status(self):
         """It should handle invalid status gracefully"""
@@ -387,7 +391,7 @@ class TestRecommendation(TestCase):
 
         data = resp.get_json()
         # Invalid enum value should be ignored, return all records
-        self.assertEqual(len(data), 3)
+        self.assertEqual(len(data["recommendations"]), 3)
 
     def test_list_recommendations_no_matching_results(self):
         """It should return empty array when no recommendations match filters"""
@@ -401,8 +405,106 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
-        self.assertIsInstance(data, list)
-        self.assertEqual(len(data), 0)
+        self.assertIn("recommendations", data)
+        self.assertEqual(len(data["recommendations"]), 0)
+        self.assertEqual(data["meta"]["total"], 0)
+
+    ######################################################################
+    #  P A G I N A T I O N   A N D   S O R T I N G   T E S T S
+    ######################################################################
+
+    def test_list_recommendations_with_pagination(self):
+        """It should paginate recommendations with limit and offset"""
+        # Create 25 recommendations
+        for i in range(25):
+            recommendation = RecommendationFactory(name=f"Rec{i:02d}")
+            recommendation.create()
+
+        # Test limit
+        resp = self.client.get("/recommendations?limit=10")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        self.assertEqual(len(data["recommendations"]), 10)
+        self.assertEqual(data["meta"]["total"], 25)
+        self.assertEqual(data["meta"]["limit"], 10)
+        self.assertEqual(data["meta"]["offset"], 0)
+
+        # Test offset
+        resp = self.client.get("/recommendations?limit=10&offset=20")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        self.assertEqual(len(data["recommendations"]), 5)  # Only 5 remaining
+        self.assertEqual(data["meta"]["offset"], 20)
+
+    def test_list_recommendations_with_sorting(self):
+        """It should sort recommendations by specified field"""
+        # Create recommendations with specific names
+        rec1 = RecommendationFactory(name="Zebra")
+        rec2 = RecommendationFactory(name="Alpha")
+        rec3 = RecommendationFactory(name="Beta")
+        rec1.create()
+        rec2.create()
+        rec3.create()
+
+        # Sort by name ascending
+        resp = self.client.get("/recommendations?sort=name_asc")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        names = [rec["name"] for rec in data["recommendations"]]
+        self.assertEqual(names, ["Alpha", "Beta", "Zebra"])
+
+        # Sort by name descending
+        resp = self.client.get("/recommendations?sort=name_desc")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        names = [rec["name"] for rec in data["recommendations"]]
+        self.assertEqual(names, ["Zebra", "Beta", "Alpha"])
+
+    def test_list_recommendations_invalid_limit(self):
+        """It should return 400 for invalid limit parameter"""
+        # Limit too high
+        resp = self.client.get("/recommendations?limit=150")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Limit negative
+        resp = self.client.get("/recommendations?limit=-5")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Limit zero
+        resp = self.client.get("/recommendations?limit=0")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_list_recommendations_invalid_offset(self):
+        """It should return 400 for invalid offset parameter"""
+        # Negative offset
+        resp = self.client.get("/recommendations?offset=-10")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_list_recommendations_invalid_sort(self):
+        """It should return 400 for invalid sort parameter"""
+        resp = self.client.get("/recommendations?sort=invalid_sort")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        data = resp.get_json()
+        self.assertIn("Invalid sort parameter", data["message"])
+
+    def test_list_recommendations_pagination_with_filters(self):
+        """It should combine pagination with filters"""
+        # Create 15 ACTIVE and 10 INACTIVE recommendations
+        for i in range(15):
+            rec = RecommendationFactory(status=RecommendationStatus.ACTIVE)
+            rec.create()
+        for i in range(10):
+            rec = RecommendationFactory(status=RecommendationStatus.INACTIVE)
+            rec.create()
+
+        # Filter and paginate
+        resp = self.client.get("/recommendations?status=active&limit=5&offset=10")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        self.assertEqual(len(data["recommendations"]), 5)
+        self.assertEqual(data["meta"]["total"], 15)  # Total active recommendations
+        for rec in data["recommendations"]:
+            self.assertEqual(rec["status"], "active")
 
 
 ######################################################################
