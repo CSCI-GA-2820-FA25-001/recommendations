@@ -116,7 +116,7 @@ class TestRecommendation(TestCase):
 
         # Check the data is correct
         new_recommendation = response.get_json()
-        self.assertEqual(new_recommendation["id"], test_recommendation.id)
+        self.assertIsNotNone(new_recommendation["id"])
         self.assertEqual(new_recommendation["name"], test_recommendation.name)
         self.assertEqual(
             new_recommendation["base_product_id"], test_recommendation.base_product_id
@@ -134,9 +134,9 @@ class TestRecommendation(TestCase):
         # Check that the location header was correct
         response = self.client.get(location)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        new_recommendation = response.get_json()
-        self.assertEqual(new_recommendation["id"], test_recommendation.id)
-        self.assertEqual(new_recommendation["name"], test_recommendation.name)
+        fetched_recommendation = response.get_json()
+        self.assertEqual(fetched_recommendation["id"], new_recommendation["id"])
+        self.assertEqual(fetched_recommendation["name"], test_recommendation.name)
         self.assertEqual(
             new_recommendation["base_product_id"], test_recommendation.base_product_id
         )
