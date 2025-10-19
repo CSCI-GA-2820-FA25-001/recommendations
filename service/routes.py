@@ -175,6 +175,105 @@ def delete_recommendations(recommendation_id):
 
 
 ######################################################################
+# Helper functions for list_recommendations
+######################################################################
+def _apply_filters(query):
+    """Apply query parameter filters to the query"""
+    # Filter by product_a_id (maps to base_product_id)
+    product_a_id = request.args.get("product_a_id", type=int)
+    if product_a_id:
+        app.logger.info("Filtering by product_a_id: %s", product_a_id)
+        query = query.filter(Recommendation.base_product_id == product_a_id)
+
+    # Filter by relationship_type
+    query = _apply_relationship_type_filter(query)
+    
+    # Filter by status
+    query = _apply_status_filter(query)
+    
+    return query
+
+
+def _apply_relationship_type_filter(query):
+    """Apply relationship_type filter to query"""
+    relationship_type = request.args.get("relationship_type")
+    if not relationship_type:
+        return query
+        
+    try:
+        type_enum = RecommendationType(relationship_type)
+        app.logger.info("Filtering by relationship_type: %s", relationship_type)
+        return query.filter(Recommendation.recommendation_type == type_enum)
+    except ValueError:
+        app.logger.warning(
+            "Invalid relationship_type value: %s. Ignoring filter.",
+            relationship_type,
+        )
+        return query
+
+
+def _apply_status_filter(query):
+    """Apply status filter to query"""
+    status_param = request.args.get("status")
+    if not status_param:
+        return query
+        
+    try:
+        status_enum = RecommendationStatus(status_param)
+        app.logger.info("Filtering by status: %s", status_param)
+        return query.filter(Recommendation.status == status_enum)
+    except ValueError:
+        app.logger.warning(
+            "Invalid status value: %s. Ignoring filter.", status_param
+        )
+        return query
+
+
+def _validate_and_get_pagination():
+    """Validate and return pagination parameters"""
+    limit = request.args.get("limit", default=20, type=int)
+    offset = request.args.get("offset", default=0, type=int)
+
+    if limit < 1 or limit > 100:
+        abort(
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid limit parameter. Must be between 1 and 100.",
+        )
+    if offset < 0:
+        abort(
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid offset parameter. Must be non-negative.",
+        )
+    
+    return limit, offset
+
+
+def _apply_sorting(query):
+    """Apply sorting to query based on sort parameter"""
+    sort_param = request.args.get("sort")
+    valid_sort_fields = {
+        "created_at_asc": Recommendation.created_at.asc(),
+        "created_at_desc": Recommendation.created_at.desc(),
+        "name_asc": Recommendation.name.asc(),
+        "name_desc": Recommendation.name.desc(),
+        "id_asc": Recommendation.id.asc(),
+        "id_desc": Recommendation.id.desc(),
+    }
+
+    if sort_param:
+        if sort_param not in valid_sort_fields:
+            abort(
+                status.HTTP_400_BAD_REQUEST,
+                f"Invalid sort parameter. Valid options: {', '.join(valid_sort_fields.keys())}",
+            )
+        app.logger.info("Sorting by: %s", sort_param)
+        return query.order_by(valid_sort_fields[sort_param])
+    
+    # Default sort by id
+    return query.order_by(Recommendation.id.asc())
+
+
+######################################################################
 # LIST A RECOMMENDATION - YOUR RESPONSIBILITY STARTS HERE
 ######################################################################
 @app.route("/recommendations", methods=["GET"])
@@ -197,88 +296,18 @@ def list_recommendations():
     """
     app.logger.info("Request to list recommendations")
 
-    # Start with base query
+    # Build query with filters and sorting
     query = Recommendation.query
+    query = _apply_filters(query)
+    query = _apply_sorting(query)
 
-    # Filter by product_a_id (maps to base_product_id)
-    product_a_id = request.args.get("product_a_id", type=int)
-    if product_a_id:
-        app.logger.info("Filtering by product_a_id: %s", product_a_id)
-        query = query.filter(Recommendation.base_product_id == product_a_id)
+    # Get and validate pagination
+    limit, offset = _validate_and_get_pagination()
 
-    # Filter by relationship_type (maps to recommendation_type)
-    relationship_type = request.args.get("relationship_type")
-    if relationship_type:
-        try:
-            # Convert string to enum
-            type_enum = RecommendationType(relationship_type)
-            app.logger.info("Filtering by relationship_type: %s", relationship_type)
-            query = query.filter(Recommendation.recommendation_type == type_enum)
-        except ValueError:
-            # Invalid enum value, log warning but don't filter
-            app.logger.warning(
-                "Invalid relationship_type value: %s. Ignoring filter.",
-                relationship_type,
-            )
-
-    # Filter by status
-    status_param = request.args.get("status")
-    if status_param:
-        try:
-            # Convert string to enum
-            status_enum = RecommendationStatus(status_param)
-            app.logger.info("Filtering by status: %s", status_param)
-            query = query.filter(Recommendation.status == status_enum)
-        except ValueError:
-            # Invalid enum value, log warning but don't filter
-            app.logger.warning(
-                "Invalid status value: %s. Ignoring filter.", status_param
-            )
-
-    # Pagination parameters
-    limit = request.args.get("limit", default=20, type=int)
-    offset = request.args.get("offset", default=0, type=int)
-
-    # Validate pagination parameters
-    if limit < 1 or limit > 100:
-        abort(
-            status.HTTP_400_BAD_REQUEST,
-            "Invalid limit parameter. Must be between 1 and 100.",
-        )
-    if offset < 0:
-        abort(
-            status.HTTP_400_BAD_REQUEST,
-            "Invalid offset parameter. Must be non-negative.",
-        )
-
-    # Sorting parameter
-    sort_param = request.args.get("sort")
-    valid_sort_fields = {
-        "created_at_asc": Recommendation.created_at.asc(),
-        "created_at_desc": Recommendation.created_at.desc(),
-        "name_asc": Recommendation.name.asc(),
-        "name_desc": Recommendation.name.desc(),
-        "id_asc": Recommendation.id.asc(),
-        "id_desc": Recommendation.id.desc(),
-    }
-
-    if sort_param:
-        if sort_param not in valid_sort_fields:
-            abort(
-                status.HTTP_400_BAD_REQUEST,
-                f"Invalid sort parameter. Valid options: {', '.join(valid_sort_fields.keys())}",
-            )
-        app.logger.info("Sorting by: %s", sort_param)
-        query = query.order_by(valid_sort_fields[sort_param])
-    else:
-        # Default sort by id
-        query = query.order_by(Recommendation.id.asc())
-
-    # Get total count before pagination
+    # Get total count and execute query
     total_count = query.count()
-
-    # Apply pagination
     recommendations = query.limit(limit).offset(offset).all()
+    
     app.logger.info(
         "Found %d recommendations (total: %d, limit: %d, offset: %d)",
         len(recommendations),
@@ -287,7 +316,7 @@ def list_recommendations():
         offset,
     )
 
-    # Build response with metadata
+    # Build response
     results = [rec.serialize() for rec in recommendations]
     response = {
         "recommendations": results,
