@@ -187,10 +187,10 @@ def _apply_filters(query):
 
     # Filter by relationship_type
     query = _apply_relationship_type_filter(query)
-    
+
     # Filter by status
     query = _apply_status_filter(query)
-    
+
     return query
 
 
@@ -199,7 +199,7 @@ def _apply_relationship_type_filter(query):
     relationship_type = request.args.get("relationship_type")
     if not relationship_type:
         return query
-        
+
     try:
         type_enum = RecommendationType(relationship_type)
         app.logger.info("Filtering by relationship_type: %s", relationship_type)
@@ -217,7 +217,7 @@ def _apply_status_filter(query):
     status_param = request.args.get("status")
     if not status_param:
         return query
-        
+
     try:
         status_enum = RecommendationStatus(status_param)
         app.logger.info("Filtering by status: %s", status_param)
@@ -244,7 +244,7 @@ def _validate_and_get_pagination():
             status.HTTP_400_BAD_REQUEST,
             "Invalid offset parameter. Must be non-negative.",
         )
-    
+
     return limit, offset
 
 
@@ -268,7 +268,7 @@ def _apply_sorting(query):
             )
         app.logger.info("Sorting by: %s", sort_param)
         return query.order_by(valid_sort_fields[sort_param])
-    
+
     # Default sort by id
     return query.order_by(Recommendation.id.asc())
 
@@ -307,7 +307,7 @@ def list_recommendations():
     # Get total count and execute query
     total_count = query.count()
     recommendations = query.limit(limit).offset(offset).all()
-    
+
     app.logger.info(
         "Found %d recommendations (total: %d, limit: %d, offset: %d)",
         len(recommendations),
