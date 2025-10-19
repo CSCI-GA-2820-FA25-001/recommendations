@@ -36,7 +36,7 @@ class RecommendationStatus(Enum):
     DRAFT = "draft"
 
 
-class Recommendation(db.Model):
+class Recommendation(db.Model):  # pylint: disable=too-many-instance-attributes
     """
     Class that represents a YourResourceModel
     """

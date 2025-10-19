@@ -490,10 +490,10 @@ class TestRecommendation(TestCase):
     def test_list_recommendations_pagination_with_filters(self):
         """It should combine pagination with filters"""
         # Create 15 ACTIVE and 10 INACTIVE recommendations
-        for i in range(15):
+        for _ in range(15):
             rec = RecommendationFactory(status=RecommendationStatus.ACTIVE)
             rec.create()
-        for i in range(10):
+        for _ in range(10):
             rec = RecommendationFactory(status=RecommendationStatus.INACTIVE)
             rec.create()
 

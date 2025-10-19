@@ -69,7 +69,6 @@ class TestRecommendation(TestCase):
 
     def test_create_recommendation(self):
         """It should create a Recommendation"""
-        # Todo: Remove this test case example
         recommendation = RecommendationFactory()
         recommendation.create()
         self.assertIsNotNone(recommendation.id)
