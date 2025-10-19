@@ -11,7 +11,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: rofrano/nyu-devops-base:su25
+    container:
+      image: rofrano/nyu-devops-base:su25
+      options: --user root
 
     services:
       postgres:
