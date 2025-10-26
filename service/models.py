@@ -53,6 +53,7 @@ class Recommendation(db.Model):
         db.Enum(RecommendationStatus), default=RecommendationStatus.DRAFT
     )
     recommendation_type = db.Column(db.Enum(RecommendationType), nullable=False)
+    likes = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
@@ -79,7 +80,7 @@ class Recommendation(db.Model):
 
     def update(self):
         """
-        Updates a YourResourceModel to the database
+        Updates a recommendation to the database
         """
         logger.info("Saving %s", self.name)
         try:
@@ -109,6 +110,7 @@ class Recommendation(db.Model):
             "base_product_id": self.base_product_id,
             "recommended_product_id": self.recommended_product_id,
             "status": self.status.value,
+            "likes": self.likes,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
@@ -121,6 +123,7 @@ class Recommendation(db.Model):
             self.base_product_id = data["base_product_id"]
             self.recommended_product_id = data["recommended_product_id"]
             self.status = RecommendationStatus(data["status"])
+            self.likes = data["likes"]
             self.created_at = data.get("created_at")
             self.updated_at = data.get("updated_at")
 

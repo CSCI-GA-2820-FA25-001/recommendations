@@ -69,22 +69,23 @@ class TestRecommendation(TestCase):
 
     def test_create_recommendation(self):
         """It should create a Recommendation"""
-        # Todo: Remove this test case example
-        recommendation = RecommendationFactory()
-        recommendation.create()
-        self.assertIsNotNone(recommendation.id)
-        found = Recommendation.all()
-        self.assertEqual(len(found), 1)
-        data = Recommendation.find(recommendation.id)
-        self.assertEqual(data.name, recommendation.name)
-        self.assertEqual(data.recommendation_type, recommendation.recommendation_type)
-        self.assertEqual(data.base_product_id, recommendation.base_product_id)
-        self.assertEqual(
-            data.recommended_product_id, recommendation.recommended_product_id
+        recommendation = Recommendation(
+            name="Alpha",
+            base_product_id=100,
+            recommended_product_id=201,
+            recommendation_type="trending",
+            status="draft",
+            likes=0,
         )
-        self.assertEqual(data.status, recommendation.status)
-        self.assertEqual(data.created_at, recommendation.created_at)
-        self.assertEqual(data.updated_at, recommendation.updated_at)
+        self.assertEqual(str(recommendation), "<Recommendation Alpha id=[None]>")
+        self.assertTrue(recommendation is not None)
+        self.assertEqual(recommendation.id, None)
+        self.assertEqual(recommendation.name, "Alpha")
+        self.assertEqual(recommendation.base_product_id, 100)
+        self.assertEqual(recommendation.recommended_product_id, 201)
+        self.assertEqual(recommendation.recommendation_type, "trending")
+        self.assertEqual(recommendation.status, "draft")
+        self.assertEqual(recommendation.likes, 0)
 
     def test_serialize_recommendation(self):
         """It should serialize a Recommendation into a dictionary"""
@@ -98,6 +99,7 @@ class TestRecommendation(TestCase):
         self.assertEqual(data["base_product_id"], rec.base_product_id)
         self.assertEqual(data["recommended_product_id"], rec.recommended_product_id)
         self.assertEqual(data["status"], rec.status.value)
+        self.assertEqual(data["likes"], rec.likes)
         self.assertIn("created_at", data)
         self.assertIn("updated_at", data)
 
@@ -110,6 +112,7 @@ class TestRecommendation(TestCase):
             "base_product_id": 1,
             "recommended_product_id": 2,
             "status": "active",
+            "likes": 100,
         }
         rec.deserialize(data)
         self.assertEqual(rec.name, data["name"])
@@ -117,6 +120,7 @@ class TestRecommendation(TestCase):
         self.assertEqual(rec.base_product_id, data["base_product_id"])
         self.assertEqual(rec.recommended_product_id, data["recommended_product_id"])
         self.assertEqual(rec.status.value, data["status"])
+        self.assertEqual(rec.likes, data["likes"])
 
     def test_deserialize_missing_field_raises(self):
         """It should raise DataValidationError when a required field is missing"""
@@ -127,6 +131,7 @@ class TestRecommendation(TestCase):
             "base_product_id": 1,
             "recommended_product_id": 2,
             "status": "active",
+            "likes": 100,
         }
         with self.assertRaises(DataValidationError):
             rec.deserialize(data)
@@ -140,6 +145,7 @@ class TestRecommendation(TestCase):
             "base_product_id": 1,
             "recommended_product_id": 2,
             "status": "active",
+            "likes": 100,
         }
         with self.assertRaises(DataValidationError):
             rec.deserialize(bad)
