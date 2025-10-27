@@ -240,6 +240,69 @@ def list_recommendations():
 
 
 ######################################################################
+# LIKE a Recommendation
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>/like", methods=["PUT"])
+def like_a_recommendation(recommendation_id):
+    """Increase the likes of a recommendation"""
+    app.logger.info("Request to like a recommendation with id: %d", recommendation_id)
+
+    # Attempt to find the Recommendation and abort if not found
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+
+    # you can only like recommendations that are active
+    if not recommendation.status == RecommendationStatus.ACTIVE:
+        abort(
+            status.HTTP_409_CONFLICT,
+            f"Recommendation with id '{recommendation_id}' is not active.",
+        )
+
+    recommendation.likes += 1
+    recommendation.update()
+
+    app.logger.info("Recommendation with ID: %d has been liked.", recommendation_id)
+    return recommendation.serialize(), status.HTTP_200_OK
+
+
+######################################################################
+# DISLIKE a Recommendation
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>/like", methods=["DELETE"])
+def dislike_a_recommendation(recommendation_id):
+    """decrease the likes of a recommendation"""
+    app.logger.info("Request to like a recommendation with id: %d", recommendation_id)
+
+    # Attempt to find the Recommendation and abort if not found
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+
+    # you can only like recommendations that are active
+    if not recommendation.status == RecommendationStatus.ACTIVE:
+        abort(
+            status.HTTP_409_CONFLICT,
+            f"Recommendation with id '{recommendation_id}' is not active.",
+        )
+    if recommendation.likes > 0:
+        recommendation.likes -= 1
+        recommendation.update()
+
+    app.logger.info("Recommendation with ID: %d has been disliked.", recommendation_id)
+    return recommendation.serialize(), status.HTTP_200_OK
+
+
+######################################################################
+#  U T I L I T Y   F U N C T I O N S
+######################################################################
+######################################################################
 # Checks the ContentType of a request
 ######################################################################
 def check_content_type(content_type) -> None:
