@@ -2,14 +2,12 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python](https://img.shields.io/badge/Language-Python-blue.svg)](https://python.org/)
-[![CI Build](https://github.com/CSCI-GA-2820-FA25-001/recommendations/actions/workflows/ci.yml/badge.svg)](https://github.com/CSCI-GA-2820-FA25-001/recommendations/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/CSCI-GA-2820-FA25-001/recommendations/branch/master/graph/badge.svg)](https://codecov.io/gh/CSCI-GA-2820-FA25-001/recommendations)
+[![Build Status](https://github.com/CSCI-GA-2820-FA25-001/recommendations/actions/workflows/ci.yml/badge.svg)](https://github.com/CSCI-GA-2820-FA25-001/recommendations/actions)
+[![codecov](https://codecov.io/gh/CSCI-GA-2820-FA25-001/recommendations/graph/badge.svg?token=Z8BYACFCO2)](https://codecov.io/gh/CSCI-GA-2820-FA25-001/recommendations)
 
 This is the Recommendations microservice for the NYU DevOps Fall 2025 eCommerce project.
 
-[![Build Status](https://github.com/CSCI-GA-2820-FA25-001/recommendations/actions/workflows/ci.yml/badge.svg)](https://github.com/CSCI-GA-2820-FA25-001/recommendations/actions)
 
-[![codecov](https://codecov.io/gh/CSCI-GA-2820-FA25-001/recommendations/graph/badge.svg?token=Z8BYACFCO2)](https://codecov.io/gh/CSCI-GA-2820-FA25-001/recommendations)
 
 ## Overview
 
