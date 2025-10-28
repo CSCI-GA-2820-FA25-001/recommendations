@@ -5,6 +5,10 @@
 
 This is the Recommendations microservice for the NYU DevOps Fall 2025 eCommerce project.
 
+[![Build Status](https://github.com/CSCI-GA-2820-FA25-001/recommendations/actions/workflows/ci.yml/badge.svg)](https://github.com/CSCI-GA-2820-FA25-001/recommendations/actions)
+
+[![codecov](https://codecov.io/gh/CSCI-GA-2820-FA25-001/recommendations/graph/badge.svg?token=ERU6QBWIAX)](https://codecov.io/gh/CSCI-GA-2820-FA25-001/recommendations
+
 ## Overview
 
 The Recommendations service manages product-to-product relationships to provide intelligent product suggestions to customers. It implements a REST API that supports __creating__, __reading__, __updating__, __deleting__, and __listing__ recommendation relationships between products.
