@@ -10,15 +10,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: rofrano/nyu-devops-base:su25
-      options: --user root
+    container: python:3.11-slim
 
     services:
       postgres:
         image: postgres:15-alpine
         env:
           POSTGRES_PASSWORD: pgs3cr3t
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -49,7 +50,14 @@ jobs:
           pytest --pspec --cov=service --cov-report=xml --cov-report=term --cov-fail-under=95 --disable-warnings
 
       
-      # Codecov upload step 
+      ######################################################################
+      # Create a CODECOV_TOKEN in Settings->Secrets and variables->Actions
+      # and then uncomment the CodeCov action during hands-on lab
+      ######################################################################
+
+      - name: Install packages for Codecov to work
+        run: apt-get update && apt-get install -y git curl gpg
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
