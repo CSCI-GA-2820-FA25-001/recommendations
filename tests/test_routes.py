@@ -466,6 +466,37 @@ class TestRecommendation(TestCase):
         response = self.client.delete(f"{BASE_URL}/{recommendation.id}/like")
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
+    # ----------------------------------------------------------
+    # TEST ACTIONS
+    # ----------------------------------------------------------
+    def test_cancel_a_recommendation(self):
+        """It should cancel a recommendation"""
+        # Create a recommendation that is available for purchase
+        rec = RecommendationFactory()
+        rec.status = "active"
+        response = self.client.post(BASE_URL, json=rec.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.get_json()
+        rec.id = data["id"]
+        self.assertEqual(data["status"], RecommendationStatus.ACTIVE)
+
+        # Call cancel on the created id and check the results
+        response = self.client.put(f"{BASE_URL}/{rec.id}/cancel")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(f"{BASE_URL}/{rec.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        logging.debug("Response data: %s", data)
+        self.assertEqual(data["status"], RecommendationStatus.INACTIVE)
+
+    def test_cancel_recommendation_not_found(self):
+        """It should not cancel a Recommendation thats not found"""
+        response = self.client.put(f"{BASE_URL}/0")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        data = response.get_json()
+        logging.debug("Response data = %s", data)
+        self.assertIn("Not Found", data["message"])
+
 
 ######################################################################
 #  T E S T   S A D   P A T H S
