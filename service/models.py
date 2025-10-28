@@ -55,7 +55,7 @@ class Recommendation(db.Model):
     recommendation_type = db.Column(db.Enum(RecommendationType), nullable=False)
     likes = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
-    updated_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
     def __repr__(self):
         return (
