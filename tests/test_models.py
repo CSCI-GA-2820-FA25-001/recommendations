@@ -22,9 +22,16 @@ Test cases for Recommendation Model
 import os
 import logging
 from unittest import TestCase
+from unittest.mock import patch
 from sqlalchemy.exc import SQLAlchemyError
 from wsgi import app
-from service.models import Recommendation, DataValidationError, db
+from service.models import (
+    Recommendation,
+    DataValidationError,
+    db,
+    RecommendationType,
+    RecommendationStatus,
+)
 from .factories import RecommendationFactory
 
 
@@ -69,22 +76,45 @@ class TestRecommendation(TestCase):
 
     def test_create_recommendation(self):
         """It should create a Recommendation"""
-        # Todo: Remove this test case example
-        recommendation = RecommendationFactory()
-        recommendation.create()
-        self.assertIsNotNone(recommendation.id)
-        found = Recommendation.all()
-        self.assertEqual(len(found), 1)
-        data = Recommendation.find(recommendation.id)
-        self.assertEqual(data.name, recommendation.name)
-        self.assertEqual(data.recommendation_type, recommendation.recommendation_type)
-        self.assertEqual(data.base_product_id, recommendation.base_product_id)
-        self.assertEqual(
-            data.recommended_product_id, recommendation.recommended_product_id
+        recommendation = Recommendation(
+            name="Alpha",
+            base_product_id=100,
+            recommended_product_id=201,
+            recommendation_type=RecommendationType.TRENDING,
+            status=RecommendationStatus.DRAFT,
+            likes=0,
         )
-        self.assertEqual(data.status, recommendation.status)
-        self.assertEqual(data.created_at, recommendation.created_at)
-        self.assertEqual(data.updated_at, recommendation.updated_at)
+        # self.assertEqual(str(recommendation), "<Recommendation Alpha id=[None]>")
+        self.assertTrue(recommendation is not None)
+        self.assertEqual(recommendation.id, None)
+        self.assertEqual(recommendation.name, "Alpha")
+        self.assertEqual(recommendation.base_product_id, 100)
+        self.assertEqual(recommendation.recommended_product_id, 201)
+        self.assertEqual(
+            recommendation.recommendation_type, RecommendationType.TRENDING
+        )
+        self.assertEqual(recommendation.status, RecommendationStatus.DRAFT)
+        self.assertEqual(recommendation.likes, 0)
+
+    def test_add_a_recommendation(self):
+        """It should Create a recommendation and add it to the database"""
+        recommendations = Recommendation.all()
+        self.assertEqual(recommendations, [])
+        recommendation = Recommendation(
+            name="Alpha",
+            base_product_id=100,
+            recommended_product_id=201,
+            recommendation_type=RecommendationType.TRENDING,
+            status=RecommendationStatus.DRAFT,
+            likes=0,
+        )
+        self.assertTrue(recommendation is not None)
+        self.assertEqual(recommendation.id, None)
+        recommendation.create()
+        # Assert that it was assigned an id and shows up in the database
+        self.assertIsNotNone(recommendation.id)
+        recommendations = Recommendation.all()
+        self.assertEqual(len(recommendations), 1)
 
     def test_serialize_recommendation(self):
         """It should serialize a Recommendation into a dictionary"""
@@ -98,6 +128,7 @@ class TestRecommendation(TestCase):
         self.assertEqual(data["base_product_id"], rec.base_product_id)
         self.assertEqual(data["recommended_product_id"], rec.recommended_product_id)
         self.assertEqual(data["status"], rec.status.value)
+        self.assertEqual(data["likes"], rec.likes)
         self.assertIn("created_at", data)
         self.assertIn("updated_at", data)
 
@@ -110,6 +141,7 @@ class TestRecommendation(TestCase):
             "base_product_id": 1,
             "recommended_product_id": 2,
             "status": "active",
+            "likes": 100,
         }
         rec.deserialize(data)
         self.assertEqual(rec.name, data["name"])
@@ -117,6 +149,7 @@ class TestRecommendation(TestCase):
         self.assertEqual(rec.base_product_id, data["base_product_id"])
         self.assertEqual(rec.recommended_product_id, data["recommended_product_id"])
         self.assertEqual(rec.status.value, data["status"])
+        self.assertEqual(rec.likes, data["likes"])
 
     def test_deserialize_missing_field_raises(self):
         """It should raise DataValidationError when a required field is missing"""
@@ -127,6 +160,7 @@ class TestRecommendation(TestCase):
             "base_product_id": 1,
             "recommended_product_id": 2,
             "status": "active",
+            "likes": 100,
         }
         with self.assertRaises(DataValidationError):
             rec.deserialize(data)
@@ -140,6 +174,7 @@ class TestRecommendation(TestCase):
             "base_product_id": 1,
             "recommended_product_id": 2,
             "status": "active",
+            "likes": 100,
         }
         with self.assertRaises(DataValidationError):
             rec.deserialize(bad)
@@ -280,3 +315,31 @@ class TestRecommendation(TestCase):
         recommendations = Recommendation.all()
         self.assertEqual(len(recommendations), 1)
         self.assertEqual(recommendations[0].id, original_id)
+
+
+######################################################################
+#  T E S T   E X C E P T I O N   H A N D L E R S
+######################################################################
+class TestExceptionHandlers(TestCase):
+    """Recommendation Model Exception Handlers"""
+
+    @patch("service.models.db.session.commit")
+    def test_create_exception(self, exception_mock):
+        """It should catch a create exception"""
+        exception_mock.side_effect = Exception()
+        recommendation = RecommendationFactory()
+        self.assertRaises(DataValidationError, recommendation.create)
+
+    @patch("service.models.db.session.commit")
+    def test_update_exception(self, exception_mock):
+        """It should catch a update exception"""
+        exception_mock.side_effect = Exception()
+        recommendation = RecommendationFactory()
+        self.assertRaises(DataValidationError, recommendation.update)
+
+    @patch("service.models.db.session.commit")
+    def test_delete_exception(self, exception_mock):
+        """It should catch a delete exception"""
+        exception_mock.side_effect = Exception()
+        recommendation = RecommendationFactory()
+        self.assertRaises(DataValidationError, recommendation.delete)

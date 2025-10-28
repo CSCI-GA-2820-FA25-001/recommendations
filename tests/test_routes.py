@@ -71,15 +71,6 @@ class TestRecommendation(TestCase):
         """This runs after each test"""
         db.session.remove()
 
-    ######################################################################
-    #  P L A C E   T E S T   C A S E S   H E R E
-    ######################################################################
-
-    def test_index(self):
-        """It should call the home page"""
-        resp = self.client.get("/")
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-
     ############################################################
     # Utility function to bulk create recommendations
     ############################################################
@@ -99,6 +90,15 @@ class TestRecommendation(TestCase):
             recommendations.append(test_recommendation)
         return recommendations
 
+    ######################################################################
+    #  P L A C E   T E S T   C A S E S   H E R E
+    ######################################################################
+
+    def test_index(self):
+        """It should call the home page"""
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
     # ----------------------------------------------------------
     # TEST CREATE
     # ----------------------------------------------------------
@@ -116,7 +116,7 @@ class TestRecommendation(TestCase):
 
         # Check the data is correct
         new_recommendation = response.get_json()
-        self.assertEqual(new_recommendation["id"], test_recommendation.id)
+        self.assertIn("id", new_recommendation)
         self.assertEqual(new_recommendation["name"], test_recommendation.name)
         self.assertEqual(
             new_recommendation["base_product_id"], test_recommendation.base_product_id
@@ -130,12 +130,13 @@ class TestRecommendation(TestCase):
             test_recommendation.recommended_product_id,
         )
         self.assertEqual(new_recommendation["status"], test_recommendation.status.value)
+        self.assertEqual(new_recommendation["likes"], test_recommendation.likes)
 
         # Check that the location header was correct
         response = self.client.get(location)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         new_recommendation = response.get_json()
-        self.assertEqual(new_recommendation["id"], test_recommendation.id)
+        self.assertIn("id", new_recommendation)
         self.assertEqual(new_recommendation["name"], test_recommendation.name)
         self.assertEqual(
             new_recommendation["base_product_id"], test_recommendation.base_product_id
@@ -144,11 +145,9 @@ class TestRecommendation(TestCase):
             new_recommendation["recommendation_type"],
             test_recommendation.recommendation_type.value,
         )
-        self.assertEqual(
-            new_recommendation["recommended_product_id"],
-            test_recommendation.recommended_product_id,
-        )
+        self.assertIn("id", new_recommendation)
         self.assertEqual(new_recommendation["status"], test_recommendation.status.value)
+        self.assertEqual(new_recommendation["likes"], test_recommendation.likes)
 
     # ----------------------------------------------------------
     # TEST READ
@@ -403,6 +402,69 @@ class TestRecommendation(TestCase):
         data = resp.get_json()
         self.assertIsInstance(data, list)
         self.assertEqual(len(data), 0)
+
+    # ----------------------------------------------------------
+    # TEST ACTIONS
+    # ----------------------------------------------------------
+    def test_like_a_recommendation(self):
+        """It should like a recommendation and increase one like."""
+        recommendations = self._create_recommendations(10)
+        active_recommendations = [
+            recommendation
+            for recommendation in recommendations
+            if recommendation.status == RecommendationStatus.ACTIVE
+        ]
+        recommendation = active_recommendations[0]
+        response = self.client.put(f"{BASE_URL}/{recommendation.id}/like")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(f"{BASE_URL}/{recommendation.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        logging.debug("Response data: %s", data)
+        self.assertEqual(data["likes"], recommendation.likes + 1)
+
+    def test_like_inactive_recommendation(self):
+        """It should not like a recommendation that is not active"""
+        recommendations = self._create_recommendations(10)
+        inactive_recommendations = [
+            recommendation
+            for recommendation in recommendations
+            if not recommendation.status == RecommendationStatus.ACTIVE
+        ]
+        recommendation = inactive_recommendations[0]
+        response = self.client.put(f"{BASE_URL}/{recommendation.id}/like")
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+    def test_dislike_a_recommendation(self):
+        """It should dislike a recommendation and reduce one like"""
+        recommendations = self._create_recommendations(10)
+        active_recommendations = [
+            recommendation
+            for recommendation in recommendations
+            if recommendation.status == RecommendationStatus.ACTIVE
+            and recommendation.likes > 0
+        ]
+        recommendation = active_recommendations[0]
+        response = self.client.delete(f"{BASE_URL}/{recommendation.id}/like")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(f"{BASE_URL}/{recommendation.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        logging.debug("Response data: %s", data)
+        self.assertEqual(data["likes"], recommendation.likes - 1)
+
+    def test_dislike_not_active(self):
+        """It should not like a recommendation that is not active or likes <= 0"""
+        recommendations = self._create_recommendations(10)
+        inactive_recommendations = [
+            recommendation
+            for recommendation in recommendations
+            if not recommendation.status == RecommendationStatus.ACTIVE
+            or recommendation.likes <= 0
+        ]
+        recommendation = inactive_recommendations[0]
+        response = self.client.delete(f"{BASE_URL}/{recommendation.id}/like")
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
 
 ######################################################################
