@@ -164,7 +164,7 @@ def delete_recommendations(recommendation_id):
     recommendation = Recommendation.find(recommendation_id)
     if not recommendation:
         abort(
-            status.HTTP_404_NOT_FOUND,
+            status.HTTP_204_NO_CONTENT,
             f"Recommendation with id '{recommendation_id}' was not found.",
         )
 
