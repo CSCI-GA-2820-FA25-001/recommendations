@@ -176,6 +176,88 @@ def delete_recommendations(recommendation_id):
 
 
 ######################################################################
+# Helper functions for list_recommendations
+######################################################################
+def _apply_filters(query):
+    """Apply query parameter filters to the query"""
+    # Support both ?product_a_id= and ?base_product_id= as filters on base_product_id
+    product_a_id = request.args.get("product_a_id", type=int)
+    base_product_id = request.args.get("base_product_id", type=int)
+
+    # If either is provided, use it to filter by Recommendation.base_product_id
+    filter_id = product_a_id if product_a_id is not None else base_product_id
+    if filter_id is not None:
+        app.logger.info("Filtering by base_product_id: %s", filter_id)
+        query = query.filter(Recommendation.base_product_id == filter_id)
+
+    # Filter by relationship_type
+    query = _apply_relationship_type_filter(query)
+
+    # Filter by status
+    query = _apply_status_filter(query)
+
+    return query
+
+
+def _apply_relationship_type_filter(query):
+    """Apply relationship_type filter to query"""
+    relationship_type = request.args.get("relationship_type")
+    if not relationship_type:
+        return query
+
+    try:
+        type_enum = RecommendationType(relationship_type)
+        app.logger.info("Filtering by relationship_type: %s", relationship_type)
+        return query.filter(Recommendation.recommendation_type == type_enum)
+    except ValueError:
+        app.logger.warning(
+            "Invalid relationship_type value: %s. Ignoring filter.",
+            relationship_type,
+        )
+        return query
+
+
+def _apply_status_filter(query):
+    """Apply status filter to query"""
+    status_param = request.args.get("status")
+    if not status_param:
+        return query
+
+    try:
+        status_enum = RecommendationStatus(status_param)
+        app.logger.info("Filtering by status: %s", status_param)
+        return query.filter(Recommendation.status == status_enum)
+    except ValueError:
+        app.logger.warning("Invalid status value: %s. Ignoring filter.", status_param)
+        return query
+
+
+def _apply_sorting(query):
+    """Apply sorting to query based on sort parameter"""
+    sort_param = request.args.get("sort")
+    valid_sort_fields = {
+        "created_at_asc": Recommendation.created_at.asc(),
+        "created_at_desc": Recommendation.created_at.desc(),
+        "name_asc": Recommendation.name.asc(),
+        "name_desc": Recommendation.name.desc(),
+        "id_asc": Recommendation.id.asc(),
+        "id_desc": Recommendation.id.desc(),
+    }
+
+    if sort_param:
+        if sort_param not in valid_sort_fields:
+            abort(
+                status.HTTP_400_BAD_REQUEST,
+                f"Invalid sort parameter. Valid options: {', '.join(valid_sort_fields.keys())}",
+            )
+        app.logger.info("Sorting by: %s", sort_param)
+        return query.order_by(valid_sort_fields[sort_param])
+
+    # Default sort by id
+    return query.order_by(Recommendation.id.asc())
+
+
+######################################################################
 # LIST A RECOMMENDATION - YOUR RESPONSIBILITY STARTS HERE
 ######################################################################
 @app.route("/recommendations", methods=["GET"])
@@ -183,59 +265,29 @@ def list_recommendations():
     """
     List all Recommendations
 
-    This endpoint returns a list of all Recommendations in the database.
+    This endpoint returns a list of Recommendations in the database.
     Query parameters can be used to filter the results:
-    - product_a_id: Filter by base product ID
-    - relationship_type: Filter by recommendation type (e.g., 'accessory', 'cross_sell')
-    - status: Filter by status (e.g., 'active', 'inactive')
+    - base_product_id / product_a_id
+    - relationship_type
+    - status
+    - sort (optional, if you keep _apply_sorting)
 
     Returns:
-        200: A JSON array of recommendations (may be empty)
+        200: JSON array of recommendations (may be empty)
     """
     app.logger.info("Request to list recommendations")
 
-    # Start with base query
+    # Build query with filters (and sorting if you want to keep it)
     query = Recommendation.query
+    query = _apply_filters(query)
+    query = _apply_sorting(query)  # <-- keep this if you want sort support
 
-    # Filter by product_a_id (maps to base_product_id)
-    product_a_id = request.args.get("product_a_id", type=int)
-    if product_a_id:
-        app.logger.info("Filtering by product_a_id: %s", product_a_id)
-        query = query.filter(Recommendation.base_product_id == product_a_id)
-
-    # Filter by relationship_type (maps to recommendation_type)
-    relationship_type = request.args.get("relationship_type")
-    if relationship_type:
-        try:
-            # Convert string to enum
-            type_enum = RecommendationType(relationship_type)
-            app.logger.info("Filtering by relationship_type: %s", relationship_type)
-            query = query.filter(Recommendation.recommendation_type == type_enum)
-        except ValueError:
-            # Invalid enum value, log warning but don't filter
-            app.logger.warning(
-                "Invalid relationship_type value: %s. Ignoring filter.",
-                relationship_type,
-            )
-
-    # Filter by status
-    status_param = request.args.get("status")
-    if status_param:
-        try:
-            # Convert string to enum
-            status_enum = RecommendationStatus(status_param)
-            app.logger.info("Filtering by status: %s", status_param)
-            query = query.filter(Recommendation.status == status_enum)
-        except ValueError:
-            # Invalid enum value, log warning but don't filter
-            app.logger.warning(
-                "Invalid status value: %s. Ignoring filter.", status_param
-            )
-
-    # Execute query and serialize results
+    # Execute query (no pagination; get everything)
     recommendations = query.all()
+
     app.logger.info("Found %d recommendations", len(recommendations))
 
+    # Directly return serialized list
     results = [rec.serialize() for rec in recommendations]
     return jsonify(results), status.HTTP_200_OK
 

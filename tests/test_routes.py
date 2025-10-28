@@ -240,8 +240,18 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
+
+        # Response should be a bare list of recommendations
         self.assertIsInstance(data, list)
         self.assertEqual(len(data), 5)
+
+        # Sanity check: each item looks like a recommendation
+        for rec in data:
+            self.assertIn("id", rec)
+            self.assertIn("name", rec)
+            self.assertIn("base_product_id", rec)
+            self.assertIn("recommendation_type", rec)
+            self.assertIn("status", rec)
 
     def test_list_recommendations_empty(self):
         """It should return an empty list when no recommendations exist"""
@@ -249,6 +259,8 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
+
+        # Still just a list
         self.assertIsInstance(data, list)
         self.assertEqual(len(data), 0)
 
@@ -270,6 +282,9 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
+
+        # Response is a list of just the matches
+        self.assertIsInstance(data, list)
         self.assertEqual(len(data), 3)
         for rec in data:
             self.assertEqual(rec["base_product_id"], target_product_id)
@@ -295,8 +310,11 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
+
+        self.assertIsInstance(data, list)
         self.assertEqual(len(data), 3)
         for rec in data:
+            # serialize() returns enum.value, which is a lowercase string like "accessory"
             self.assertEqual(rec["recommendation_type"], "accessory")
 
     def test_list_recommendations_by_status(self):
@@ -316,8 +334,11 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
+
+        self.assertIsInstance(data, list)
         self.assertEqual(len(data), 4)
         for rec in data:
+            # Again, rec["status"] is the enum .value, e.g. "active"
             self.assertEqual(rec["status"], "active")
 
     def test_list_recommendations_with_multiple_filters(self):
@@ -352,11 +373,15 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
+
+        self.assertIsInstance(data, list)
         self.assertEqual(len(data), 2)
         for rec in data:
             self.assertEqual(rec["base_product_id"], target_product_id)
-            self.assertEqual(rec["recommendation_type"], "accessory")
-            self.assertEqual(rec["status"], "active")
+            self.assertEqual(
+                rec["recommendation_type"], target_type.value
+            )  # "accessory"
+            self.assertEqual(rec["status"], target_status.value)  # "active"
 
     def test_list_recommendations_invalid_relationship_type(self):
         """It should handle invalid relationship_type gracefully"""
@@ -370,7 +395,9 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
-        # Invalid enum value should be ignored, return all records
+
+        # Invalid enum value should be ignored, so we should still get all records back
+        self.assertIsInstance(data, list)
         self.assertEqual(len(data), 3)
 
     def test_list_recommendations_invalid_status(self):
@@ -385,22 +412,27 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
-        # Invalid enum value should be ignored, return all records
+
+        # Invalid enum value should be ignored, so we should still get all records back
+        self.assertIsInstance(data, list)
         self.assertEqual(len(data), 3)
 
     def test_list_recommendations_no_matching_results(self):
         """It should return empty array when no recommendations match filters"""
-        # Create recommendations with product_id=101
+        # Create recommendations with base_product_id=101
         for _ in range(3):
             recommendation = RecommendationFactory(base_product_id=101)
             recommendation.create()
 
         # Query for non-existent product_id
-        resp = self.client.get("/recommendations?product_a_id=999")
+        resp = self.client.get("/recommendations?base_product_id=999")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
+
+        # Now the API returns just a list (no "recommendations", no "meta")
         self.assertIsInstance(data, list)
+        # Should be empty because base_product_id=999 doesn't match any
         self.assertEqual(len(data), 0)
 
     # ----------------------------------------------------------
