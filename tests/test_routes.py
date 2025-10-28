@@ -466,6 +466,28 @@ class TestRecommendation(TestCase):
         response = self.client.delete(f"{BASE_URL}/{recommendation.id}/like")
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
+    def test_send_a_recommendation(self):
+        """It should send a recommendation successfully (200 OK)"""
+        recommendation = self._create_recommendations(1)[0]
+        rec_id = recommendation.id
+
+        resp = self.client.post(f"{BASE_URL}/{rec_id}/send", json={})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        self.assertIn("message", data)
+        self.assertIn("recommendation", data)
+        self.assertIn("sent", data)
+        self.assertIn("tracking_code", data["sent"])
+
+    def test_send_recommendation_not_found(self):
+        """It should return 404 Not Found if recommendation doesn't exist"""
+        resp = self.client.post(f"{BASE_URL}/99999/send", json={})
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+        data = resp.get_json()
+        self.assertIn("not found", data["message"].lower())
+
 
 ######################################################################
 #  T E S T   S A D   P A T H S

@@ -20,7 +20,8 @@ Recommendations Service
 This service implements a REST API that allows you to Create, Read, Update,
 Delete, and List Recommendations.
 """
-
+from datetime import datetime
+import uuid
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
 from service.models import Recommendation, RecommendationType, RecommendationStatus
@@ -297,6 +298,46 @@ def dislike_a_recommendation(recommendation_id):
 
     app.logger.info("Recommendation with ID: %d has been disliked.", recommendation_id)
     return recommendation.serialize(), status.HTTP_200_OK
+
+
+######################################################################
+# SEND a Recommendation
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>/send", methods=["POST"])
+def send_a_recommendation(recommendation_id):
+    """Send a recommendation to users"""
+
+    app.logger.info("Request to send a recommendation with id: %d", recommendation_id)
+
+    # Attempt to find the Recommendation and abort if not found
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+
+    # Only return 200 when found (no other checks for now)
+
+    recommendation.merchant_send_count += 1
+    recommendation.last_sent_at = datetime.utcnow()
+    recommendation.update()
+
+    tracking_code = uuid.uuid4().hex
+    app.logger.info(
+        "Recommendation with ID: %d has been sent successfully.", recommendation_id
+    )
+
+    result = {
+        "message": f"Recommendation {recommendation.id} sent successfully.",
+        "recommendation": recommendation.serialize(),
+        "sent": {
+            "tracking_code": tracking_code,
+            "sent_at": datetime.utcnow().isoformat() + "Z",
+        },
+    }
+
+    return result, status.HTTP_200_OK
 
 
 ######################################################################

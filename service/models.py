@@ -54,6 +54,8 @@ class Recommendation(db.Model):  # pylint: disable=too-many-instance-attributes
     )
     recommendation_type = db.Column(db.Enum(RecommendationType), nullable=False)
     likes = db.Column(db.Integer, default=0, nullable=False)
+    merchant_send_count = db.Column(db.Integer, default=0, nullable=False)
+    last_sent_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
@@ -111,6 +113,8 @@ class Recommendation(db.Model):  # pylint: disable=too-many-instance-attributes
             "recommended_product_id": self.recommended_product_id,
             "status": self.status.value,
             "likes": self.likes,
+            "merchant_send_count": self.merchant_send_count,
+            "last_sent_at": self.last_sent_at,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
@@ -124,6 +128,8 @@ class Recommendation(db.Model):  # pylint: disable=too-many-instance-attributes
             self.recommended_product_id = data["recommended_product_id"]
             self.status = RecommendationStatus(data["status"])
             self.likes = data["likes"]
+            self.merchant_send_count = data.get("merchant_send_count", 0)
+            self.last_sent_at = data.get("last_sent_at")
             self.created_at = data.get("created_at")
             self.updated_at = data.get("updated_at")
 
