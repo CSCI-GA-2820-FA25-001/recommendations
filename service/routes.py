@@ -20,7 +20,8 @@ Recommendations Service
 This service implements a REST API that allows you to Create, Read, Update,
 Delete, and List Recommendations.
 """
-
+from datetime import datetime
+import uuid
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
 from service.models import Recommendation, RecommendationType, RecommendationStatus
@@ -317,8 +318,6 @@ def send_a_recommendation(recommendation_id):
         )
 
     # Only return 200 when found (no other checks for now)
-    from datetime import datetime
-    import uuid
 
     recommendation.merchant_send_count += 1
     recommendation.last_sent_at = datetime.utcnow()
