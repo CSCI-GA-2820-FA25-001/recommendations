@@ -398,3 +398,31 @@ def cancel_recommendation(recommendation_id):
         )
 
     return jsonify(recommendation.serialize()), status.HTTP_200_OK
+
+
+######################################################################
+# REACTIVATE A RECOMMENDATION
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>/activate", methods=["PUT"])
+def reactivate_recommendation(recommendation_id):
+    """reactivate a recommendation"""
+
+    app.logger.info("Request to reactivate recommendation id [%s]", recommendation_id)
+
+    # Find it or 404
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+    if recommendation.status != RecommendationStatus.ACTIVE:
+        recommendation.status = RecommendationStatus.ACTIVE
+        recommendation.update()
+        app.logger.info("Recommendation id [%d] set to ACTIVE.", recommendation_id)
+    else:
+        app.logger.info(
+            "Recommendation id [%d] already ACTIVE (idempotent).", recommendation_id
+        )
+
+    return jsonify(recommendation.serialize()), status.HTTP_200_OK
