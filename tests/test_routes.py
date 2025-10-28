@@ -496,6 +496,7 @@ class TestRecommendation(TestCase):
         data = response.get_json()
         logging.debug("Response data = %s", data)
         self.assertIn("Not Found", data["message"])
+
     def test_send_a_recommendation(self):
         """It should send a recommendation successfully (200 OK)"""
         recommendation = self._create_recommendations(1)[0]
@@ -517,6 +518,34 @@ class TestRecommendation(TestCase):
 
         data = resp.get_json()
         self.assertIn("not found", data["message"].lower())
+
+    def test_reactivate_a_recommendation(self):
+        """It should reactivate a recommendation"""
+        # Create a recommendation that is available for changing status
+        rec = RecommendationFactory()
+        rec.status = RecommendationStatus.INACTIVE
+        response = self.client.post(BASE_URL, json=rec.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.get_json()
+        rec.id = data["id"]
+        self.assertEqual(data["status"], RecommendationStatus.INACTIVE.value)
+
+        # Call activate on the created id and check the results
+        response = self.client.put(f"{BASE_URL}/{rec.id}/activate")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(f"{BASE_URL}/{rec.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        logging.debug("Response data: %s", data)
+        self.assertEqual(data["status"], RecommendationStatus.ACTIVE.value)
+
+    def test_reactivate_recommendation_not_found(self):
+        """It should not reactivate a Recommendation thats not found"""
+        response = self.client.put(f"{BASE_URL}/0", json={"status": "active"})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        data = response.get_json()
+        logging.debug("Response data = %s", data)
+        self.assertIn("Not Found", data["message"])
 
 
 ######################################################################
