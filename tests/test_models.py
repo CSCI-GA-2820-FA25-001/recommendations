@@ -90,8 +90,10 @@ class TestRecommendation(TestCase):
         self.assertEqual(recommendation.name, "Alpha")
         self.assertEqual(recommendation.base_product_id, 100)
         self.assertEqual(recommendation.recommended_product_id, 201)
-        self.assertEqual(recommendation.recommendation_type, "trending")
-        self.assertEqual(recommendation.status, "draft")
+        self.assertEqual(
+            recommendation.recommendation_type, RecommendationType.TRENDING
+        )
+        self.assertEqual(recommendation.status, RecommendationStatus.DRAFT)
         self.assertEqual(recommendation.likes, 0)
 
     def test_add_a_recommendation(self):

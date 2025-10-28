@@ -36,7 +36,7 @@ class RecommendationStatus(Enum):
     DRAFT = "draft"
 
 
-class Recommendation(db.Model):
+class Recommendation(db.Model):  # pylint: disable=too-many-instance-attributes
     """
     Class that represents a Recommendation Model
     """
@@ -57,7 +57,7 @@ class Recommendation(db.Model):
     merchant_send_count = db.Column(db.Integer, default=0, nullable=False)
     last_sent_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
-    updated_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
     def __repr__(self):
         return (
