@@ -224,9 +224,7 @@ def _apply_status_filter(query):
         app.logger.info("Filtering by status: %s", status_param)
         return query.filter(Recommendation.status == status_enum)
     except ValueError:
-        app.logger.warning(
-            "Invalid status value: %s. Ignoring filter.", status_param
-        )
+        app.logger.warning("Invalid status value: %s. Ignoring filter.", status_param)
         return query
 
 
