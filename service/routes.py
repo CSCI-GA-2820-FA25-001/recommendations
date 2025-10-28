@@ -363,3 +363,38 @@ def check_content_type(content_type) -> None:
         status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
         f"Content-Type must be {content_type}",
     )
+
+
+######################################################################
+# CANCEL (DEACTIVATE) A RECOMMENDATION
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>/cancel", methods=["PUT"])
+def cancel_recommendation(recommendation_id):
+    """
+    Cancel (deactivate) a Recommendation
+
+    This endpoint sets a recommendation's status to INACTIVE (i.e., temporarily
+    disables it) without deleting the record. It is idempotent: calling it on an
+    already INACTIVE recommendation returns 200 with the current representation.
+    """
+    app.logger.info(
+        "Request to cancel (deactivate) recommendation id [%s]", recommendation_id
+    )
+
+    # Find it or 404
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+    if recommendation.status != RecommendationStatus.INACTIVE:
+        recommendation.status = RecommendationStatus.INACTIVE
+        recommendation.update()
+        app.logger.info("Recommendation id [%d] set to INACTIVE.", recommendation_id)
+    else:
+        app.logger.info(
+            "Recommendation id [%d] already INACTIVE (idempotent).", recommendation_id
+        )
+
+    return jsonify(recommendation.serialize()), status.HTTP_200_OK
