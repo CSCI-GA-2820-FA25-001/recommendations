@@ -473,12 +473,12 @@ class TestRecommendation(TestCase):
         """It should cancel a recommendation"""
         # Create a recommendation that is available for purchase
         rec = RecommendationFactory()
-        rec.status = "active"
+        rec.status = RecommendationStatus.ACTIVE
         response = self.client.post(BASE_URL, json=rec.serialize())
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response.get_json()
         rec.id = data["id"]
-        self.assertEqual(data["status"], RecommendationStatus.ACTIVE)
+        self.assertEqual(data["status"], RecommendationStatus.ACTIVE.value)
 
         # Call cancel on the created id and check the results
         response = self.client.put(f"{BASE_URL}/{rec.id}/cancel")
@@ -487,11 +487,11 @@ class TestRecommendation(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.get_json()
         logging.debug("Response data: %s", data)
-        self.assertEqual(data["status"], RecommendationStatus.INACTIVE)
+        self.assertEqual(data["status"], RecommendationStatus.INACTIVE.value)
 
     def test_cancel_recommendation_not_found(self):
         """It should not cancel a Recommendation thats not found"""
-        response = self.client.put(f"{BASE_URL}/0")
+        response = self.client.put(f"{BASE_URL}/0", json={"status": "inactive"})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         data = response.get_json()
         logging.debug("Response data = %s", data)
