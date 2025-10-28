@@ -10,9 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: rofrano/nyu-devops-base:su25
-      options: --user root
+    container: python:3.11-slim
 
     services:
       postgres:
