@@ -20,7 +20,8 @@ Recommendations Service
 This service implements a REST API that allows you to Create, Read, Update,
 Delete, and List Recommendations.
 """
-
+from datetime import datetime
+import uuid
 from flask import jsonify, request, url_for, abort
 from flask import current_app as app  # Import Flask application
 from service.models import Recommendation, RecommendationType, RecommendationStatus
@@ -331,6 +332,109 @@ def list_recommendations():
 
 
 ######################################################################
+# LIKE a Recommendation
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>/like", methods=["PUT"])
+def like_a_recommendation(recommendation_id):
+    """Increase the likes of a recommendation"""
+    app.logger.info("Request to like a recommendation with id: %d", recommendation_id)
+
+    # Attempt to find the Recommendation and abort if not found
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+
+    # you can only like recommendations that are active
+    if not recommendation.status == RecommendationStatus.ACTIVE:
+        abort(
+            status.HTTP_409_CONFLICT,
+            f"Recommendation with id '{recommendation_id}' is not active.",
+        )
+
+    recommendation.likes += 1
+    recommendation.update()
+
+    app.logger.info("Recommendation with ID: %d has been liked.", recommendation_id)
+    return recommendation.serialize(), status.HTTP_200_OK
+
+
+######################################################################
+# DISLIKE a Recommendation
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>/like", methods=["DELETE"])
+def dislike_a_recommendation(recommendation_id):
+    """decrease the likes of a recommendation"""
+    app.logger.info("Request to like a recommendation with id: %d", recommendation_id)
+
+    # Attempt to find the Recommendation and abort if not found
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+
+    # you can only like recommendations that are active
+    if not recommendation.status == RecommendationStatus.ACTIVE:
+        abort(
+            status.HTTP_409_CONFLICT,
+            f"Recommendation with id '{recommendation_id}' is not active.",
+        )
+    if recommendation.likes > 0:
+        recommendation.likes -= 1
+        recommendation.update()
+
+    app.logger.info("Recommendation with ID: %d has been disliked.", recommendation_id)
+    return recommendation.serialize(), status.HTTP_200_OK
+
+
+######################################################################
+# SEND a Recommendation
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>/send", methods=["POST"])
+def send_a_recommendation(recommendation_id):
+    """Send a recommendation to users"""
+
+    app.logger.info("Request to send a recommendation with id: %d", recommendation_id)
+
+    # Attempt to find the Recommendation and abort if not found
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+
+    # Only return 200 when found (no other checks for now)
+
+    recommendation.merchant_send_count += 1
+    recommendation.last_sent_at = datetime.utcnow()
+    recommendation.update()
+
+    tracking_code = uuid.uuid4().hex
+    app.logger.info(
+        "Recommendation with ID: %d has been sent successfully.", recommendation_id
+    )
+
+    result = {
+        "message": f"Recommendation {recommendation.id} sent successfully.",
+        "recommendation": recommendation.serialize(),
+        "sent": {
+            "tracking_code": tracking_code,
+            "sent_at": datetime.utcnow().isoformat() + "Z",
+        },
+    }
+
+    return result, status.HTTP_200_OK
+
+
+######################################################################
+#  U T I L I T Y   F U N C T I O N S
+######################################################################
+######################################################################
 # Checks the ContentType of a request
 ######################################################################
 def check_content_type(content_type) -> None:
@@ -350,3 +454,66 @@ def check_content_type(content_type) -> None:
         status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
         f"Content-Type must be {content_type}",
     )
+
+
+######################################################################
+# CANCEL (DEACTIVATE) A RECOMMENDATION
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>/cancel", methods=["PUT"])
+def cancel_recommendation(recommendation_id):
+    """
+    Cancel (deactivate) a Recommendation
+
+    This endpoint sets a recommendation's status to INACTIVE (i.e., temporarily
+    disables it) without deleting the record. It is idempotent: calling it on an
+    already INACTIVE recommendation returns 200 with the current representation.
+    """
+    app.logger.info(
+        "Request to cancel (deactivate) recommendation id [%s]", recommendation_id
+    )
+
+    # Find it or 404
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+    if recommendation.status != RecommendationStatus.INACTIVE:
+        recommendation.status = RecommendationStatus.INACTIVE
+        recommendation.update()
+        app.logger.info("Recommendation id [%d] set to INACTIVE.", recommendation_id)
+    else:
+        app.logger.info(
+            "Recommendation id [%d] already INACTIVE (idempotent).", recommendation_id
+        )
+
+    return jsonify(recommendation.serialize()), status.HTTP_200_OK
+
+
+######################################################################
+# REACTIVATE A RECOMMENDATION
+######################################################################
+@app.route("/recommendations/<int:recommendation_id>/activate", methods=["PUT"])
+def reactivate_recommendation(recommendation_id):
+    """reactivate a recommendation"""
+
+    app.logger.info("Request to reactivate recommendation id [%s]", recommendation_id)
+
+    # Find it or 404
+    recommendation = Recommendation.find(recommendation_id)
+    if not recommendation:
+        abort(
+            status.HTTP_404_NOT_FOUND,
+            f"Recommendation with id '{recommendation_id}' was not found.",
+        )
+    if recommendation.status != RecommendationStatus.ACTIVE:
+        recommendation.status = RecommendationStatus.ACTIVE
+        recommendation.update()
+        app.logger.info("Recommendation id [%d] set to ACTIVE.", recommendation_id)
+    else:
+        app.logger.info(
+            "Recommendation id [%d] already ACTIVE (idempotent).", recommendation_id
+        )
+
+    return jsonify(recommendation.serialize()), status.HTTP_200_OK

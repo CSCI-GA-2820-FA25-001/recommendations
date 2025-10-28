@@ -1,5 +1,4 @@
 name: CI Build
-
 on:
   push:
     branches:
@@ -11,15 +10,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: rofrano/nyu-devops-base:su25
-      options: --user root
+    container: python:3.11-slim
 
     services:
       postgres:
         image: postgres:15-alpine
         env:
           POSTGRES_PASSWORD: pgs3cr3t
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -35,16 +35,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install pipenv
           pipenv install --system --dev
-
       - name: Lint with flake8
         run: |
           flake8 service tests --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 service tests --count --max-complexity=10 --max-line-length=127 --statistics
-
       - name: Lint with pylint
         run: |
           pylint service tests --max-line-length=127
-
       - name: Run unit tests with pytest
         env:
           DATABASE_URI: postgresql+psycopg://postgres:pgs3cr3t@postgres:5432/postgres
@@ -52,11 +49,17 @@ jobs:
           export RETRY_COUNT=1
           pytest --pspec --cov=service --cov-report=xml --cov-report=term --cov-fail-under=95 --disable-warnings
 
-      # Codecov upload step - commented out until CODECOV_TOKEN is available
-      # - name: Upload coverage to Codecov
-      #   uses: codecov/codecov-action@v3
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-      #     files: ./coverage.xml
-      #     fail_ci_if_error: true
-      #     verbose: true
+      
+      ######################################################################
+      # Create a CODECOV_TOKEN in Settings->Secrets and variables->Actions
+      # and then uncomment the CodeCov action during hands-on lab
+      ######################################################################
+
+      - name: Install packages for Codecov to work
+        run: apt-get update && apt-get install -y git curl gpg
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: CSCI-GA-2820-FA25-001/recommendations

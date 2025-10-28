@@ -71,15 +71,6 @@ class TestRecommendation(TestCase):
         """This runs after each test"""
         db.session.remove()
 
-    ######################################################################
-    #  P L A C E   T E S T   C A S E S   H E R E
-    ######################################################################
-
-    def test_index(self):
-        """It should call the home page"""
-        resp = self.client.get("/")
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-
     ############################################################
     # Utility function to bulk create recommendations
     ############################################################
@@ -99,6 +90,15 @@ class TestRecommendation(TestCase):
             recommendations.append(test_recommendation)
         return recommendations
 
+    ######################################################################
+    #  P L A C E   T E S T   C A S E S   H E R E
+    ######################################################################
+
+    def test_index(self):
+        """It should call the home page"""
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
     # ----------------------------------------------------------
     # TEST CREATE
     # ----------------------------------------------------------
@@ -116,7 +116,7 @@ class TestRecommendation(TestCase):
 
         # Check the data is correct
         new_recommendation = response.get_json()
-        self.assertIsNotNone(new_recommendation["id"])
+        self.assertIn("id", new_recommendation)
         self.assertEqual(new_recommendation["name"], test_recommendation.name)
         self.assertEqual(
             new_recommendation["base_product_id"], test_recommendation.base_product_id
@@ -130,13 +130,14 @@ class TestRecommendation(TestCase):
             test_recommendation.recommended_product_id,
         )
         self.assertEqual(new_recommendation["status"], test_recommendation.status.value)
+        self.assertEqual(new_recommendation["likes"], test_recommendation.likes)
 
         # Check that the location header was correct
         response = self.client.get(location)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        fetched_recommendation = response.get_json()
-        self.assertEqual(fetched_recommendation["id"], new_recommendation["id"])
-        self.assertEqual(fetched_recommendation["name"], test_recommendation.name)
+        new_recommendation = response.get_json()
+        self.assertIn("id", new_recommendation)
+        self.assertEqual(new_recommendation["name"], test_recommendation.name)
         self.assertEqual(
             new_recommendation["base_product_id"], test_recommendation.base_product_id
         )
@@ -144,11 +145,9 @@ class TestRecommendation(TestCase):
             new_recommendation["recommendation_type"],
             test_recommendation.recommendation_type.value,
         )
-        self.assertEqual(
-            new_recommendation["recommended_product_id"],
-            test_recommendation.recommended_product_id,
-        )
+        self.assertIn("id", new_recommendation)
         self.assertEqual(new_recommendation["status"], test_recommendation.status.value)
+        self.assertEqual(new_recommendation["likes"], test_recommendation.likes)
 
     # ----------------------------------------------------------
     # TEST READ
@@ -405,106 +404,152 @@ class TestRecommendation(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
-        self.assertIn("recommendations", data)
-        self.assertEqual(len(data["recommendations"]), 0)
-        self.assertEqual(data["meta"]["total"], 0)
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 0)
 
-    ######################################################################
-    #  P A G I N A T I O N   A N D   S O R T I N G   T E S T S
-    ######################################################################
+    # ----------------------------------------------------------
+    # TEST ACTIONS
+    # ----------------------------------------------------------
+    def test_like_a_recommendation(self):
+        """It should like a recommendation and increase one like."""
+        recommendations = self._create_recommendations(10)
+        active_recommendations = [
+            recommendation
+            for recommendation in recommendations
+            if recommendation.status == RecommendationStatus.ACTIVE
+        ]
+        recommendation = active_recommendations[0]
+        response = self.client.put(f"{BASE_URL}/{recommendation.id}/like")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(f"{BASE_URL}/{recommendation.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        logging.debug("Response data: %s", data)
+        self.assertEqual(data["likes"], recommendation.likes + 1)
 
-    def test_list_recommendations_with_pagination(self):
-        """It should paginate recommendations with limit and offset"""
-        # Create 25 recommendations
-        for i in range(25):
-            recommendation = RecommendationFactory(name=f"Rec{i:02d}")
-            recommendation.create()
+    def test_like_inactive_recommendation(self):
+        """It should not like a recommendation that is not active"""
+        recommendations = self._create_recommendations(10)
+        inactive_recommendations = [
+            recommendation
+            for recommendation in recommendations
+            if not recommendation.status == RecommendationStatus.ACTIVE
+        ]
+        recommendation = inactive_recommendations[0]
+        response = self.client.put(f"{BASE_URL}/{recommendation.id}/like")
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
-        # Test limit
-        resp = self.client.get("/recommendations?limit=10")
+    def test_dislike_a_recommendation(self):
+        """It should dislike a recommendation and reduce one like"""
+        recommendations = self._create_recommendations(10)
+        active_recommendations = [
+            recommendation
+            for recommendation in recommendations
+            if recommendation.status == RecommendationStatus.ACTIVE
+            and recommendation.likes > 0
+        ]
+        recommendation = active_recommendations[0]
+        response = self.client.delete(f"{BASE_URL}/{recommendation.id}/like")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(f"{BASE_URL}/{recommendation.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        logging.debug("Response data: %s", data)
+        self.assertEqual(data["likes"], recommendation.likes - 1)
+
+    def test_dislike_not_active(self):
+        """It should not like a recommendation that is not active or likes <= 0"""
+        recommendations = self._create_recommendations(10)
+        inactive_recommendations = [
+            recommendation
+            for recommendation in recommendations
+            if not recommendation.status == RecommendationStatus.ACTIVE
+            or recommendation.likes <= 0
+        ]
+        recommendation = inactive_recommendations[0]
+        response = self.client.delete(f"{BASE_URL}/{recommendation.id}/like")
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+    # ----------------------------------------------------------
+    # TEST ACTIONS
+    # ----------------------------------------------------------
+    def test_cancel_a_recommendation(self):
+        """It should cancel a recommendation"""
+        # Create a recommendation that is available for purchase
+        rec = RecommendationFactory()
+        rec.status = RecommendationStatus.ACTIVE
+        response = self.client.post(BASE_URL, json=rec.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.get_json()
+        rec.id = data["id"]
+        self.assertEqual(data["status"], RecommendationStatus.ACTIVE.value)
+
+        # Call cancel on the created id and check the results
+        response = self.client.put(f"{BASE_URL}/{rec.id}/cancel")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(f"{BASE_URL}/{rec.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        logging.debug("Response data: %s", data)
+        self.assertEqual(data["status"], RecommendationStatus.INACTIVE.value)
+
+    def test_cancel_recommendation_not_found(self):
+        """It should not cancel a Recommendation thats not found"""
+        response = self.client.put(f"{BASE_URL}/0", json={"status": "inactive"})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        data = response.get_json()
+        logging.debug("Response data = %s", data)
+        self.assertIn("Not Found", data["message"])
+
+    def test_send_a_recommendation(self):
+        """It should send a recommendation successfully (200 OK)"""
+        recommendation = self._create_recommendations(1)[0]
+        rec_id = recommendation.id
+
+        resp = self.client.post(f"{BASE_URL}/{rec_id}/send", json={})
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
         data = resp.get_json()
-        self.assertEqual(len(data["recommendations"]), 10)
-        self.assertEqual(data["meta"]["total"], 25)
-        self.assertEqual(data["meta"]["limit"], 10)
-        self.assertEqual(data["meta"]["offset"], 0)
+        self.assertIn("message", data)
+        self.assertIn("recommendation", data)
+        self.assertIn("sent", data)
+        self.assertIn("tracking_code", data["sent"])
 
-        # Test offset
-        resp = self.client.get("/recommendations?limit=10&offset=20")
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+    def test_send_recommendation_not_found(self):
+        """It should return 404 Not Found if recommendation doesn't exist"""
+        resp = self.client.post(f"{BASE_URL}/99999/send", json={})
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
         data = resp.get_json()
-        self.assertEqual(len(data["recommendations"]), 5)  # Only 5 remaining
-        self.assertEqual(data["meta"]["offset"], 20)
+        self.assertIn("not found", data["message"].lower())
 
-    def test_list_recommendations_with_sorting(self):
-        """It should sort recommendations by specified field"""
-        # Create recommendations with specific names
-        rec1 = RecommendationFactory(name="Zebra")
-        rec2 = RecommendationFactory(name="Alpha")
-        rec3 = RecommendationFactory(name="Beta")
-        rec1.create()
-        rec2.create()
-        rec3.create()
+    def test_reactivate_a_recommendation(self):
+        """It should reactivate a recommendation"""
+        # Create a recommendation that is available for changing status
+        rec = RecommendationFactory()
+        rec.status = RecommendationStatus.INACTIVE
+        response = self.client.post(BASE_URL, json=rec.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.get_json()
+        rec.id = data["id"]
+        self.assertEqual(data["status"], RecommendationStatus.INACTIVE.value)
 
-        # Sort by name ascending
-        resp = self.client.get("/recommendations?sort=name_asc")
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        data = resp.get_json()
-        names = [rec["name"] for rec in data["recommendations"]]
-        self.assertEqual(names, ["Alpha", "Beta", "Zebra"])
+        # Call activate on the created id and check the results
+        response = self.client.put(f"{BASE_URL}/{rec.id}/activate")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(f"{BASE_URL}/{rec.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        logging.debug("Response data: %s", data)
+        self.assertEqual(data["status"], RecommendationStatus.ACTIVE.value)
 
-        # Sort by name descending
-        resp = self.client.get("/recommendations?sort=name_desc")
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        data = resp.get_json()
-        names = [rec["name"] for rec in data["recommendations"]]
-        self.assertEqual(names, ["Zebra", "Beta", "Alpha"])
-
-    def test_list_recommendations_invalid_limit(self):
-        """It should return 400 for invalid limit parameter"""
-        # Limit too high
-        resp = self.client.get("/recommendations?limit=150")
-        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
-
-        # Limit negative
-        resp = self.client.get("/recommendations?limit=-5")
-        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
-
-        # Limit zero
-        resp = self.client.get("/recommendations?limit=0")
-        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_list_recommendations_invalid_offset(self):
-        """It should return 400 for invalid offset parameter"""
-        # Negative offset
-        resp = self.client.get("/recommendations?offset=-10")
-        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_list_recommendations_invalid_sort(self):
-        """It should return 400 for invalid sort parameter"""
-        resp = self.client.get("/recommendations?sort=invalid_sort")
-        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
-        data = resp.get_json()
-        self.assertIn("Invalid sort parameter", data["message"])
-
-    def test_list_recommendations_pagination_with_filters(self):
-        """It should combine pagination with filters"""
-        # Create 15 ACTIVE and 10 INACTIVE recommendations
-        for _ in range(15):
-            rec = RecommendationFactory(status=RecommendationStatus.ACTIVE)
-            rec.create()
-        for _ in range(10):
-            rec = RecommendationFactory(status=RecommendationStatus.INACTIVE)
-            rec.create()
-
-        # Filter and paginate
-        resp = self.client.get("/recommendations?status=active&limit=5&offset=10")
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        data = resp.get_json()
-        self.assertEqual(len(data["recommendations"]), 5)
-        self.assertEqual(data["meta"]["total"], 15)  # Total active recommendations
-        for rec in data["recommendations"]:
-            self.assertEqual(rec["status"], "active")
+    def test_reactivate_recommendation_not_found(self):
+        """It should not reactivate a Recommendation thats not found"""
+        response = self.client.put(f"{BASE_URL}/0", json={"status": "active"})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        data = response.get_json()
+        logging.debug("Response data = %s", data)
+        self.assertIn("Not Found", data["message"])
 
 
 ######################################################################

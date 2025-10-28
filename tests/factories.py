@@ -3,6 +3,7 @@ Test Factory to make fake objects for testing
 """
 
 from datetime import datetime
+import random
 import factory
 from service.models import Recommendation, RecommendationType, RecommendationStatus
 
@@ -21,5 +22,8 @@ class RecommendationFactory(factory.Factory):
     base_product_id = factory.Sequence(lambda n: n + 100)
     recommended_product_id = factory.Sequence(lambda n: n + 200)
     status = factory.Iterator(list(RecommendationStatus))
+    likes = factory.LazyFunction(lambda: random.randint(0, 9999))
+    merchant_send_count = factory.LazyFunction(lambda: random.randint(0, 10))
+    last_sent_at = factory.LazyFunction(datetime.now)
     created_at = factory.LazyFunction(datetime.now)
     updated_at = factory.LazyFunction(datetime.now)

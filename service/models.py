@@ -38,7 +38,7 @@ class RecommendationStatus(Enum):
 
 class Recommendation(db.Model):  # pylint: disable=too-many-instance-attributes
     """
-    Class that represents a YourResourceModel
+    Class that represents a Recommendation Model
     """
 
     ##################################################
@@ -53,8 +53,11 @@ class Recommendation(db.Model):  # pylint: disable=too-many-instance-attributes
         db.Enum(RecommendationStatus), default=RecommendationStatus.DRAFT
     )
     recommendation_type = db.Column(db.Enum(RecommendationType), nullable=False)
+    likes = db.Column(db.Integer, default=0, nullable=False)
+    merchant_send_count = db.Column(db.Integer, default=0, nullable=False)
+    last_sent_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
-    updated_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
     def __repr__(self):
         return (
@@ -79,7 +82,7 @@ class Recommendation(db.Model):  # pylint: disable=too-many-instance-attributes
 
     def update(self):
         """
-        Updates a YourResourceModel to the database
+        Updates a recommendation to the database
         """
         logger.info("Saving %s", self.name)
         try:
@@ -109,6 +112,9 @@ class Recommendation(db.Model):  # pylint: disable=too-many-instance-attributes
             "base_product_id": self.base_product_id,
             "recommended_product_id": self.recommended_product_id,
             "status": self.status.value,
+            "likes": self.likes,
+            "merchant_send_count": self.merchant_send_count,
+            "last_sent_at": self.last_sent_at,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
@@ -121,6 +127,9 @@ class Recommendation(db.Model):  # pylint: disable=too-many-instance-attributes
             self.base_product_id = data["base_product_id"]
             self.recommended_product_id = data["recommended_product_id"]
             self.status = RecommendationStatus(data["status"])
+            self.likes = data["likes"]
+            self.merchant_send_count = data.get("merchant_send_count", 0)
+            self.last_sent_at = data.get("last_sent_at")
             self.created_at = data.get("created_at")
             self.updated_at = data.get("updated_at")
 
@@ -145,16 +154,16 @@ class Recommendation(db.Model):  # pylint: disable=too-many-instance-attributes
 
     @classmethod
     def find(cls, by_id):
-        """Finds a YourResourceModel by it's ID"""
+        """Finds a Recommendation Model by it's ID"""
         logger.info("Processing lookup for id %s ...", by_id)
         return cls.query.session.get(cls, by_id)
 
     @classmethod
     def find_by_name(cls, name):
-        """Returns all YourResourceModels with the given name
+        """Returns all Recommendation Models with the given name
 
         Args:
-            name (string): the name of the YourResourceModels you want to match
+            name (string): the name of the Recommendation Models you want to match
         """
         logger.info("Processing name query for %s ...", name)
         return cls.query.filter(cls.name == name)
