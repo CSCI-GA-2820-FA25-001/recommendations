@@ -10,16 +10,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: python:3.11-slim
+    container:
+      image: rofrano/nyu-devops-base:su25
+      options: --user root
 
     services:
       postgres:
-        image: postgres:alpine
+        image: postgres:15-alpine
         env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: testdb
-        ports:
-          - 5432:5432
+          POSTGRES_PASSWORD: pgs3cr3t
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
