@@ -400,12 +400,25 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Query for non-existent product_id
-        resp = self.client.get("/recommendations?product_a_id=999")
+        resp = self.client.get("/recommendations?base_product_id=999")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
-        self.assertIsInstance(data, list)
-        self.assertEqual(len(data), 0)
+
+        # Structure is { "recommendations": [...], "meta": {...} }
+        self.assertIn("recommendations", data)
+        self.assertIn("meta", data)
+
+        # recommendations should be empty list
+        self.assertIsInstance(data["recommendations"], list)
+        self.assertEqual(len(data["recommendations"]), 0)
+
+        # meta should reflect the empty result
+        meta = data["meta"]
+        self.assertEqual(meta["count"], 0)
+        self.assertEqual(meta["total"], 0)
+        self.assertIn("limit", meta)
+        self.assertIn("offset", meta)
 
     # ----------------------------------------------------------
     # TEST ACTIONS

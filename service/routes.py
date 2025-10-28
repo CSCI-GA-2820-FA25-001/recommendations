@@ -180,11 +180,15 @@ def delete_recommendations(recommendation_id):
 ######################################################################
 def _apply_filters(query):
     """Apply query parameter filters to the query"""
-    # Filter by product_a_id (maps to base_product_id)
+    # Support both ?product_a_id= and ?base_product_id= as filters on base_product_id
     product_a_id = request.args.get("product_a_id", type=int)
-    if product_a_id:
-        app.logger.info("Filtering by product_a_id: %s", product_a_id)
-        query = query.filter(Recommendation.base_product_id == product_a_id)
+    base_product_id = request.args.get("base_product_id", type=int)
+
+    # If either is provided, use it to filter by Recommendation.base_product_id
+    filter_id = product_a_id if product_a_id is not None else base_product_id
+    if filter_id is not None:
+        app.logger.info("Filtering by base_product_id: %s", filter_id)
+        query = query.filter(Recommendation.base_product_id == filter_id)
 
     # Filter by relationship_type
     query = _apply_relationship_type_filter(query)
