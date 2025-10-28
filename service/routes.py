@@ -232,25 +232,6 @@ def _apply_status_filter(query):
         return query
 
 
-def _validate_and_get_pagination():
-    """Validate and return pagination parameters"""
-    limit = request.args.get("limit", default=20, type=int)
-    offset = request.args.get("offset", default=0, type=int)
-
-    if limit < 1 or limit > 100:
-        abort(
-            status.HTTP_400_BAD_REQUEST,
-            "Invalid limit parameter. Must be between 1 and 100.",
-        )
-    if offset < 0:
-        abort(
-            status.HTTP_400_BAD_REQUEST,
-            "Invalid offset parameter. Must be non-negative.",
-        )
-
-    return limit, offset
-
-
 def _apply_sorting(query):
     """Apply sorting to query based on sort parameter"""
     sort_param = request.args.get("sort")
@@ -284,53 +265,31 @@ def list_recommendations():
     """
     List all Recommendations
 
-    This endpoint returns a list of all Recommendations in the database.
-    Query parameters can be used to filter, paginate, and sort the results:
-    - product_a_id: Filter by base product ID
-    - relationship_type: Filter by recommendation type (e.g., 'accessory', 'cross_sell')
-    - status: Filter by status (e.g., 'active', 'inactive')
-    - limit: Number of results to return (default 20, max 100)
-    - offset: Number of results to skip (default 0)
-    - sort: Sort order (e.g., 'created_at_asc', 'created_at_desc', 'name_asc', 'name_desc')
+    This endpoint returns a list of Recommendations in the database.
+    Query parameters can be used to filter the results:
+    - base_product_id / product_a_id
+    - relationship_type
+    - status
+    - sort (optional, if you keep _apply_sorting)
 
     Returns:
-        200: A JSON object with recommendations array and pagination metadata
-        400: Bad request if invalid parameters provided
+        200: JSON array of recommendations (may be empty)
     """
     app.logger.info("Request to list recommendations")
 
-    # Build query with filters and sorting
+    # Build query with filters (and sorting if you want to keep it)
     query = Recommendation.query
     query = _apply_filters(query)
-    query = _apply_sorting(query)
+    query = _apply_sorting(query)  # <-- keep this if you want sort support
 
-    # Get and validate pagination
-    limit, offset = _validate_and_get_pagination()
+    # Execute query (no pagination; get everything)
+    recommendations = query.all()
 
-    # Get total count and execute query
-    total_count = query.count()
-    recommendations = query.limit(limit).offset(offset).all()
+    app.logger.info("Found %d recommendations", len(recommendations))
 
-    app.logger.info(
-        "Found %d recommendations (total: %d, limit: %d, offset: %d)",
-        len(recommendations),
-        total_count,
-        limit,
-        offset,
-    )
-
-    # Build response
+    # Directly return serialized list
     results = [rec.serialize() for rec in recommendations]
-    response = {
-        "recommendations": results,
-        "meta": {
-            "total": total_count,
-            "limit": limit,
-            "offset": offset,
-            "count": len(results),
-        },
-    }
-    return jsonify(response), status.HTTP_200_OK
+    return jsonify(results), status.HTTP_200_OK
 
 
 ######################################################################
