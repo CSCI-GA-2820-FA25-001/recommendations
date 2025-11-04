@@ -95,3 +95,43 @@ Copyright (c) 2016, 2025 [John Rofrano](https://www.linkedin.com/in/JohnRofrano/
 Licensed under the Apache License. See [LICENSE](LICENSE)
 
 This repository is part of the New York University (NYU) masters class: **CSCI-GA.2820-001 DevOps and Agile Methodologies** created and taught by [John Rofrano](https://cs.nyu.edu/~rofrano/), Adjunct Instructor, NYU Courant Institute, Graduate Division, Computer Science, and NYU Stern School of Business.
+
+## Kubernetes (local k3d)
+
+The service can be deployed to a local Kubernetes cluster (via k3d) and exposed on `http://localhost:8080`.
+
+### Quick start with Makefile
+
+```bash
+# 1) Create a local k3d cluster with a registry and port 8080 mapped to the LB
+make cluster
+
+# 2) Build and push the image to the local registry
+make build
+make push
+
+# 3) Deploy all manifests under ./k8s/
+make deploy
+```
+
+### Manual commands (apply / verify / delete)
+
+```bash
+# Apply all Kubernetes resources
+kubectl apply -f k8s/
+
+# Verify pods become Ready
+kubectl get pods
+kubectl wait --for=condition=Available deployment/recommendations --timeout=120s
+
+# Verify health endpoint
+curl -i http://localhost:8080/health
+
+# Delete all resources
+kubectl delete -f k8s/
+```
+
+Notes:
+- The manifests in `k8s/` include an Ingress (Traefik) that routes `/` to the service.
+- The application image is `cluster-registry:5000/petshop:1.0` by default (see `Makefile`).
+- A Postgres Deployment/Service is included for local development.
