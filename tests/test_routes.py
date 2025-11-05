@@ -47,12 +47,6 @@ class TestRecommendation(TestCase):
     """REST API Server Tests"""
 
     @classmethod
-    def test_health(self):
-        """It should return a 200 OK response"""
-        response = self.client.get("/health")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    @classmethod
     def setUpClass(cls):
         """Run once before all tests"""
         app.config["TESTING"] = True
@@ -104,6 +98,11 @@ class TestRecommendation(TestCase):
         """It should call the home page"""
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_health(self):
+        """It should return a 200 OK response"""
+        response = self.client.get("/health")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     # ----------------------------------------------------------
     # TEST CREATE
