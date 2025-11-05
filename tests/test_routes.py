@@ -47,6 +47,12 @@ class TestRecommendation(TestCase):
     """REST API Server Tests"""
 
     @classmethod
+    def test_health(self):
+        """It should return a 200 OK response"""
+        response = self.client.get("/health")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @classmethod
     def setUpClass(cls):
         """Run once before all tests"""
         app.config["TESTING"] = True
