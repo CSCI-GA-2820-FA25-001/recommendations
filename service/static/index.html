@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Recommendations Demo REST API Service</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" href="static/images/newapp-icon.png">
+    <link rel="stylesheet" href="static/css/cerulean_bootstrap.min.css">
+  </head>
+  <body>
+    <div class="container">
+      <div class="page-header">
+        <h1>Recommendations Demo REST API Service</h1>
+      </div>
+
+      <!-- Flash Message -->
+      <div class="table-responsive">
+        <table class="table">
+          <tr><td>Status:</td><td><span id="flash_message"></span></td></tr>
+        </table>
+      </div>
+
+      <!-- FORM -->
+      <div class="col-md-12" id="form_data">
+        <h3>Create, Retrieve, Update, and Delete a Recommendation:</h3>
+        <div class="well">
+          <!-- ID row -->
+          <div class="form-horizontal">
+            <div class="form-group">
+              <label class="control-label col-sm-2" for="recommendation_id">Recommendation ID:</label>
+              <div class="col-sm-6">
+                <input type="text" class="form-control" id="recommendation_id" placeholder="Enter recommendation ID">
+              </div>
+              <div class="col-sm-4">
+                <button type="button" class="btn btn-primary" id="retrieve-btn">Retrieve</button>
+                <button type="button" class="btn btn-danger" id="delete-btn">Delete</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-horizontal">
+            <!-- NAME -->
+            <div class="form-group">
+              <label class="control-label col-sm-2" for="recommendation_name">Name:</label>
+              <div class="col-sm-10">
+                <input type="text" class="form-control" id="recommendation_name" placeholder="e.g., 'Phone X → Case Y (accessory)'">
+              </div>
+            </div>
+
+            <!-- BASE PRODUCT ID -->
+            <div class="form-group">
+              <label class="control-label col-sm-2" for="recommendation_base_product_id">Base Product ID:</label>
+              <div class="col-sm-10">
+                <input type="number" class="form-control" id="recommendation_base_product_id" placeholder="Enter base product ID (integer)">
+              </div>
+            </div>
+
+            <!-- RECOMMENDED PRODUCT ID -->
+            <div class="form-group">
+              <label class="control-label col-sm-2" for="recommendation_recommended_product_id">Recommended Product ID:</label>
+              <div class="col-sm-10">
+                <input type="number" class="form-control" id="recommendation_recommended_product_id" placeholder="Enter recommended product ID (integer)">
+              </div>
+            </div>
+
+            <!-- RECOMMENDATION TYPE -->
+            <div class="form-group">
+              <label class="control-label col-sm-2" for="recommendation_recommendation_type">Recommendation Type:</label>
+              <div class="col-sm-10">
+                <select class="form-control" id="recommendation_recommendation_type">
+                  <option value="accessory">accessory</option>
+                  <option value="cross_sell">cross_sell</option>
+                  <option value="up_sell">up_sell</option>
+                  <option value="trending">trending</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- STATUS -->
+            <div class="form-group">
+              <label class="control-label col-sm-2" for="recommendation_status">Status:</label>
+              <div class="col-sm-10">
+                <select class="form-control" id="recommendation_status">
+                  <option value="draft" selected>draft</option>
+                  <option value="active">active</option>
+                  <option value="inactive">inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- LIKES -->
+            <div class="form-group">
+              <label class="control-label col-sm-2" for="recommendation_likes">Likes:</label>
+              <div class="col-sm-10">
+                <input type="number" class="form-control" id="recommendation_likes" min="0" value="0" step="1">
+              </div>
+            </div>
+
+            <!-- LIKE / DISLIKE -->
+            <div class="form-group">
+              <div class="col-sm-offset-2 col-sm-10">
+                <button type="button" class="btn btn-success" id="like-btn">Like</button>
+                <button type="button" class="btn btn-danger" id="dislike-btn">Dislike</button>
+              </div>
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div class="form-group">
+              <div class="col-sm-offset-2 col-sm-10">
+                <button type="button" class="btn btn-info" id="list-btn">List</button>
+                <button type="button" class="btn btn-primary" id="search-btn">Search</button>
+                <button type="button" class="btn btn-primary" id="clear-btn">Clear</button>
+                <button type="button" class="btn btn-success" id="create-btn">Create</button>
+                <button type="button" class="btn btn-warning" id="update-btn">Update</button>
+              </div>
+            </div>
+          </div> <!-- form horizontal -->
+        </div> <!-- end well -->
+      </div> <!-- end Form -->
+
+      <!-- Search Results -->
+      <div class="table-responsive col-md-12" id="search_results">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th class="col-md-1">ID</th>
+              <th class="col-md-3">Name</th>
+              <th class="col-md-2">Base Product ID</th>
+              <th class="col-md-2">Recommended Product ID</th>
+              <th class="col-md-2">Type</th>
+              <th class="col-md-1">Status</th>
+              <th class="col-md-1">Likes</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <footer>
+        <br><br>
+        <p>&copy; NYU DevOps 2025 FA</p>
+      </footer>
+    </div> <!-- container -->
+
+    <script src="static/js/jquery-3.6.0.min.js"></script>
+    <script src="static/js/bootstrap.min.js"></script>
+
+    <!-- YOUR REST API JS (the updated jQuery client code I gave you) -->
+    <script src="static/js/rest_api.js"></script>
+  </body>
+</html>

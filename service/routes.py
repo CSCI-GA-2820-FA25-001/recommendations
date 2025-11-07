@@ -42,25 +42,26 @@ def health_check():
 ######################################################################
 @app.route("/")
 def index():
-    """Root URL response"""
-    info = {
-        "service": "Recommendations Service",
-        "version": "1.0",
-        "description": (
-            "This microservice manages product-to-product recommendations "
-            "for the eCommerce platform. It supports Create, Read, Update, "
-            "Delete, and List operations for recommendation relationships."
-        ),
-        "endpoints": {
-            "list": "/recommendations",
-            "create": "/recommendations",
-            "read": "/recommendations/<id>",
-            "update": "/recommendations/<id>",
-            "delete": "/recommendations/<id>",
-        },
-        "status": "OK",
-    }
-    return jsonify(info), status.HTTP_200_OK
+    # """Root URL response"""
+    # info = {
+    #     "service": "Recommendations Service",
+    #     "version": "1.0",
+    #     "description": (
+    #         "This microservice manages product-to-product recommendations "
+    #         "for the eCommerce platform. It supports Create, Read, Update, "
+    #         "Delete, and List operations for recommendation relationships."
+    #     ),
+    #     "endpoints": {
+    #         "list": "/recommendations",
+    #         "create": "/recommendations",
+    #         "read": "/recommendations/<id>",
+    #         "update": "/recommendations/<id>",
+    #         "delete": "/recommendations/<id>",
+    #     },
+    #     "status": "OK",
+    # }
+    # return jsonify(info), status.HTTP_200_OK
+    return app.send_static_file("index.html")
 
 
 ######################################################################
