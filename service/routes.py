@@ -27,7 +27,6 @@ from flask import current_app as app  # Import Flask application
 from service.models import Recommendation, RecommendationType, RecommendationStatus
 from service.common import status  # HTTP Status Codes
 
-
 ######################################################################
 # GET HEALTH CHECK
 ######################################################################
@@ -35,7 +34,6 @@ from service.common import status  # HTTP Status Codes
 def health_check():
     """Let them know our heart is still beating"""
     return jsonify(status=200, message="Healthy"), status.HTTP_200_OK
-
 
 ######################################################################
 # GET INDEX
