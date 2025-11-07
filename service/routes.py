@@ -27,6 +27,7 @@ from flask import current_app as app  # Import Flask application
 from service.models import Recommendation, RecommendationType, RecommendationStatus
 from service.common import status  # HTTP Status Codes
 
+
 ######################################################################
 # GET HEALTH CHECK
 ######################################################################
@@ -34,6 +35,7 @@ from service.common import status  # HTTP Status Codes
 def health_check():
     """Let them know our heart is still beating"""
     return jsonify(status=200, message="Healthy"), status.HTTP_200_OK
+
 
 ######################################################################
 # GET INDEX
@@ -67,8 +69,7 @@ def index():
 @app.route("/health", methods=["GET"])
 def health():
     """Health check endpoint"""
-    return jsonify(status="OK"), status.HTTP_200_OK
-
+    return {"status": "OK"}, status.HTTP_200_OK
 
 ######################################################################
 #  R E S T   A P I   E N D P O I N T S
