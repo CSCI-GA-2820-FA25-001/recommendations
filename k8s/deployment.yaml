@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendations
+  labels:
+    app: recommendations
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: recommendations
+  template:
+    metadata:
+      labels:
+        app: recommendations
+    spec:
+      containers:
+        - name: recommendations
+          image: cluster-registry:5000/petshop:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: DATABASE_URI
+              value: "postgresql+psycopg://postgres:pgs3cr3t@postgres:5432/postgres"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
