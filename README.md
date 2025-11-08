@@ -52,6 +52,20 @@ make lint
 
 This project follows Test-Driven Development(TDD) pratices and includes complete model and route tets with at lease 95% code coverage.
 
+## BDD Tests
+
+UI automation tests using Behave and Selenium:
+
+```bash
+# Install dependencies
+pip install behave selenium
+
+# Run tests (service must be running)
+behave features/ --tags=@list
+```
+
+Test files are located in `features/` directory.
+
 ## API Endpoints
 
 __Recommendations__
