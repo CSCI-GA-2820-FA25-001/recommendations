@@ -1,7 +1,7 @@
 # These can be overidden with env vars.
 REGISTRY ?= cluster-registry:5000
 LOCAL_REGISTRY ?= localhost:5000
-IMAGE_NAME ?= petshop
+IMAGE_NAME ?= recommendation
 IMAGE_TAG ?= 1.0
 IMAGE ?= $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 LOCAL_IMAGE ?= $(LOCAL_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
