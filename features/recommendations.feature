@@ -31,3 +31,12 @@ Scenario: Search for active
     And I should see "1" in the results
     And I should see "109" in the results
     And I should not see "23" in the results
+
+Scenario: List all recommendations
+    When I visit the "Home Page"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "1" in the results
+    And I should see "23" in the results
+    And I should see "109" in the results
+    And I should see "85" in the results
