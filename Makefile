@@ -1,6 +1,6 @@
 # These can be overidden with env vars.
 REGISTRY ?= cluster-registry:5000
-IMAGE_NAME ?= petshop
+IMAGE_NAME ?= recommendation
 IMAGE_TAG ?= 1.0
 IMAGE ?= $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 PLATFORM ?= "linux/amd64,linux/arm64"
@@ -84,7 +84,7 @@ init:	## Creates the buildx instance
 .PHONY: build
 build:	## Build the project container image for local platform
 	$(info Building $(IMAGE)...)
-	docker build --rm --pull --tag $(IMAGE) .
+	docker build -f ./Dockerfile --rm --pull --tag $(IMAGE) .
 
 .PHONY: push
 push:	## Push the image to the container registry
