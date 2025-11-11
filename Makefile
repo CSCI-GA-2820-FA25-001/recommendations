@@ -1,10 +1,8 @@
 # These can be overidden with env vars.
 REGISTRY ?= cluster-registry:5000
-LOCAL_REGISTRY ?= localhost:5000
 IMAGE_NAME ?= petshop
 IMAGE_TAG ?= 1.0
 IMAGE ?= $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
-LOCAL_IMAGE ?= $(LOCAL_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 PLATFORM ?= "linux/amd64,linux/arm64"
 CLUSTER ?= nyu-devops
 
@@ -34,9 +32,9 @@ install: ## Install Python dependencies
 .PHONY: lint
 lint: ## Run the linter
 	$(info Running linting...)
-	-flake8 service tests --count --select=E9,F63,F7,F82 --show-source --statistics
-	-flake8 service tests --count --max-complexity=10 --max-line-length=127 --statistics
-	-pylint service tests --max-line-length=127
+	flake8 service tests --count --select=E9,F63,F7,F82 --show-source --statistics
+	flake8 service tests --count --max-complexity=10 --max-line-length=127 --statistics
+	pylint service tests --max-line-length=127
 
 .PHONY: test
 test: ## Run the unit tests
@@ -68,7 +66,7 @@ cluster-rm: ## Remove a K3D Kubernetes cluster
 .PHONY: deploy
 deploy: ## Deploy the service on local Kubernetes
 	$(info Deploying service locally...)
-	kubectl apply -R -f k8s/
+	kubectl apply -f k8s/
 
 ############################################################
 # COMMANDS FOR BUILDING THE IMAGE
@@ -86,12 +84,12 @@ init:	## Creates the buildx instance
 .PHONY: build
 build:	## Build the project container image for local platform
 	$(info Building $(IMAGE)...)
-	docker build --rm --pull --tag $(IMAGE) --tag $(LOCAL_IMAGE) .
+	docker build --rm --pull --tag $(IMAGE) .
 
 .PHONY: push
 push:	## Push the image to the container registry
-	$(info Pushing $(LOCAL_IMAGE)...)
-	docker push $(LOCAL_IMAGE)
+	$(info Pushing $(IMAGE)...)
+	docker push $(IMAGE)
 
 .PHONY: buildx
 buildx:	## Build multi-platform image with buildx
