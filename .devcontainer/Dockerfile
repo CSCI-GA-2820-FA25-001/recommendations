@@ -1,4 +1,5 @@
 # This image has selenium and chrome driver already installed
+FROM rofrano/nyu-devops-base:su25
 FROM rofrano/pipeline-selenium:latest
 
 # Become a regular user for development
