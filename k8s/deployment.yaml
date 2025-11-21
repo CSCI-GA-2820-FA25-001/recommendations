@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: recommendations
-          image: cluster-registry:5000/petshop:1.0
+          image: cluster-registry:5000/recommendations:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
