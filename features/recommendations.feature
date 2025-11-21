@@ -13,7 +13,7 @@ Background:
 
 Scenario: The server is running
     When I visit the "Home Page"
-    Then I should see "Recommendations Demo RESTful Service" in the title
+    Then I should see "Recommendations Demo REST API Service" in the title
     And I should not see "404 Not Found"
 
 Scenario: Search for accessory
@@ -28,15 +28,15 @@ Scenario: Search for active
     And I select "draft" in the "Status" dropdown
     And I press the "Search" button
     Then I should see the message "Success"
-    And I should see "1" in the results
-    And I should see "109" in the results
-    And I should not see "23" in the results
+    And I should see "Phone X -> Case Y" in the results
+    And I should see "Jeans X -> Belt Y" in the results
+    And I should not see "Clothes X -> Clothes Y" in the results
 
 Scenario: List all recommendations
     When I visit the "Home Page"
     And I press the "Search" button
     Then I should see the message "Success"
-    And I should see "1" in the results
-    And I should see "23" in the results
-    And I should see "109" in the results
-    And I should see "85" in the results
+    And I should see "Phone X -> Case Y" in the results
+    And I should see "Clothes X -> Clothes Y" in the results
+    And I should see "Jeans X -> Belt Y" in the results
+    And I should see "Bag X -> Bag Y" in the results

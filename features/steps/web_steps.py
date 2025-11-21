@@ -19,7 +19,17 @@ def step_navigate_to_page(context, page="home"):
     )
 
 
+@when('I visit the "{page}"')
+def step_visit_page(context, page):
+    """Visit a specific page"""
+    context.driver.get(context.base_url)
+    WebDriverWait(context.driver, context.wait_seconds).until(
+        EC.presence_of_element_located((By.TAG_NAME, "body"))
+    )
+
+
 @when('I click the "{button_name}" button')
+@when('I press the "{button_name}" button')
 def step_click_button(context, button_name):
     """Click a button by its ID or visible text"""
     button_id = f"{button_name.lower().replace(' ', '-')}-btn"
@@ -48,16 +58,23 @@ def step_click_element_by_id(context, element_id):
 @when('I fill in "{field_name}" with "{value}"')
 @when('I set the "{field_name}" to "{value}"')
 def step_fill_field(context, field_name, value):
-    """Fill a text input field with a value"""
+    """Fill a text input field with a value or set a select element"""
     field_id = f"recommendation_{field_name.lower().replace(' ', '_')}"
     field = WebDriverWait(context.driver, context.wait_seconds).until(
         EC.presence_of_element_located((By.ID, field_id))
     )
-    field.clear()
-    field.send_keys(value)
+    
+    # Check if it's a select element
+    if field.tag_name.lower() == 'select':
+        select = Select(field)
+        select.select_by_value(value)
+    else:
+        field.clear()
+        field.send_keys(value)
 
 
 @when('I select "{option}" from the "{field_name}" dropdown')
+@when('I select "{option}" in the "{field_name}" dropdown')
 def step_select_dropdown(context, option, field_name):
     """Select an option from a dropdown"""
     field_id = f"recommendation_{field_name.lower().replace(' ', '_')}"
@@ -79,11 +96,22 @@ def step_clear_form(context):
 @then('I should see the message "{message}"')
 def step_verify_message(context, message):
     """Verify that a specific message is displayed"""
-    flash_message = WebDriverWait(context.driver, context.wait_seconds).until(
+    # Wait for flash message element to be present
+    flash_element = WebDriverWait(context.driver, context.wait_seconds).until(
         EC.presence_of_element_located((By.ID, "flash_message"))
     )
-    assert message.lower() in flash_message.text.lower(), \
-        f"Expected message '{message}' not found. Actual: '{flash_message.text}'"
+    
+    # Wait for the message text to be non-empty (AJAX completes)
+    def message_contains_text(driver):
+        element = driver.find_element(By.ID, "flash_message")
+        return element.text.strip() != ""
+    
+    WebDriverWait(context.driver, context.wait_seconds).until(message_contains_text)
+    
+    # Now verify the message
+    actual_message = flash_element.text
+    assert message.lower() in actual_message.lower(), \
+        f"Expected message '{message}' not found. Actual: '{actual_message}'"
 
 
 @then('the "{field_name}" field should contain "{value}"')
@@ -156,3 +184,36 @@ def step_wait_for_element(context, element_id):
     WebDriverWait(context.driver, context.wait_seconds).until(
         EC.presence_of_element_located((By.ID, element_id))
     )
+
+
+@then('I should see "{text}" in the title')
+def step_verify_title(context, text):
+    """Verify that the page title contains specific text"""
+    assert text in context.driver.title, \
+        f"Expected '{text}' in title but got '{context.driver.title}'"
+
+
+@then('I should not see "{text}"')
+def step_should_not_see_text(context, text):
+    """Verify that specific text is not present on the page"""
+    page_source = context.driver.page_source
+    assert text not in page_source, \
+        f"Text '{text}' should not be present on the page"
+
+
+@then('I should see "{text}" in the results')
+def step_should_see_in_results(context, text):
+    """Verify that specific text appears in the search results"""
+    results = WebDriverWait(context.driver, context.wait_seconds).until(
+        EC.presence_of_element_located((By.ID, "search_results"))
+    )
+    assert text in results.text, \
+        f"Expected '{text}' in results but got '{results.text}'"
+
+
+@then('I should not see "{text}" in the results')
+def step_should_not_see_in_results(context, text):
+    """Verify that specific text does not appear in the search results"""
+    results = context.driver.find_element(By.ID, "search_results")
+    assert text not in results.text, \
+        f"Text '{text}' should not appear in results"
