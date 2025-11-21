@@ -9,6 +9,48 @@ from selenium.webdriver.support import expected_conditions as EC
 import requests
 
 
+@given('the following recommendations')
+def step_load_recommendations(context):
+    """Load test recommendations into the database"""
+    headers = {'Content-Type': 'application/json'}
+    
+    # First, delete all existing recommendations to start fresh
+    try:
+        list_response = requests.get(f"{context.base_url}/recommendations", timeout=10)
+        if list_response.status_code == 200:
+            existing = list_response.json()
+            for rec in existing:
+                requests.delete(
+                    f"{context.base_url}/recommendations/{rec['id']}",
+                    timeout=10
+                )
+    except requests.exceptions.RequestException:
+        pass  # If deletion fails, continue anyway
+    
+    # Create each recommendation from the table
+    for idx, row in enumerate(context.table):
+        recommendation_data = {
+            "name": row['Name'],
+            "base_product_id": int(row['Base Product ID']),
+            "recommended_product_id": int(row['Recommended Product ID']),
+            "recommendation_type": row['Recommendation Type'],
+            "status": row['Status'],
+            "likes": 0
+        }
+        
+        # Try to create the recommendation
+        response = requests.post(
+            f"{context.base_url}/recommendations",
+            json=recommendation_data,
+            headers=headers,
+            timeout=10
+        )
+        
+        # Check if creation was successful
+        assert response.status_code in [200, 201], \
+            f"Failed to create {row['Name']}: {response.status_code} - {response.text}"
+
+
 @given('the recommendations service is running')
 def step_service_is_running(context):
     """Verify that the recommendations service is accessible"""
