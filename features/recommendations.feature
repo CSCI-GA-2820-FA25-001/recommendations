@@ -4,12 +4,12 @@ Feature: The recommendation service back-end
     So that I can keep track of all recommendation
 
 Background:
-    Given the following recommendations
-        | Recommendation Id    | Name                     |Base Product ID | Recommended Product ID | Recommendation Type  | Status   |
-        | 1                    | Phone X -> Case Y        |101             | 201                    | accessory            | draft    |
-        | 23                   | Clothes X -> Clothes Y   |345             | 873                    | up_sell              | active   |
-        | 109                  | Jeans X -> Belt Y        |723             | 908                    | cross_sell           | draft    |
-        | 85                   | Bag X -> Bag Y           |196             | 292                    | trending             | inactive |
+Given the following recommendations
+        | Recommendation Id    | Name                     |Base Product ID | Recommended Product ID | Recommendation Type  | Status   | Likes
+        | 1                    | Phone X -> Case Y        |101             | 201                    | accessory            | draft    | 0
+        | 23                   | Clothes X -> Clothes Y   |345             | 873                    | up_sell              | active   | 23
+        | 109                  | Jeans X -> Belt Y        |723             | 908                    | cross_sell           | draft    | 0
+        | 85                   | Bag X -> Bag Y           |196             | 292                    | trending             | inactive | 45
 
 Scenario: The server is running
     When I visit the "Home Page"
