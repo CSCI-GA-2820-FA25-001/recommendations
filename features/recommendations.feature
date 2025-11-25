@@ -134,3 +134,24 @@ Scenario: Delete a recommendation
     And I set the "id" to "1"
     And I press the "Retrieve" button
     Then I should see the message "404 Not Found"
+
+Scenario: Activate a Recommendation
+    When I visit the "Home Page"
+    And I press the "Clear" button
+    And I set the "base_product_id" to "196"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "Bag X -> Bag Y" in the "name" field
+    And I should see "196" in the "base_product_id" field
+    And I should see "292" in the "recommended_product_id" field
+    And I should see "trending" in the "recommendation_type" dropdown
+    And I should see "inactive" in the "status" dropdown
+    When I select "active" in the "status" dropdown
+    And I press the "Update" button
+    Then I should see the message "Updated successfully."
+    When I copy the "base_product_id" field
+    And I press the "Clear" button
+    And I paste the "base_product_id" field
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "active" in the "status" field
