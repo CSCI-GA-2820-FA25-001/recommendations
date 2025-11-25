@@ -84,9 +84,6 @@ Scenario: Dislike a recommendation
     When I press the "Dislike" button
     Then I should see "22" in the "likes" field
 
-
-
-
 Scenario: Search for draft recommendations
     When I visit the "Home Page"
     And I press the "Clear" button
@@ -96,7 +93,6 @@ Scenario: Search for draft recommendations
     And I should see "Jeans X -> Belt Y" in the results
     And I should see "Phone X -> Case Y" in the results
     And I should not see "Clothes X -> Clothes" in the results
-
 
 Scenario: Update a Recommendation
     When I visit the "Home Page"
@@ -123,3 +119,18 @@ Scenario: Update a Recommendation
     And I should see "Jeans X -> Premium Belt Y" in the results
     And I should not see "Jeans X -> Belt Y" in the results
 
+Scenario: Delete a recommendation
+    When I visit the "Home Page"
+    And I press the "Clear" button
+    And I set the "base_product_id" to "101"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "Phone X -> Case Y" in the "name" field
+    And I should see "accessory" in the "recommendation_type" dropdown
+    And I should see "draft" in the "status" dropdown
+    When I press the "Delete" button
+    Then I should see the message "Recommendation deleted."
+    When I press the "Clear" button
+    And I set the "id" to "1"
+    And I press the "Retrieve" button
+    Then I should see the message "404 Not Found"
