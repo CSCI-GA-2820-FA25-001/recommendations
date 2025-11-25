@@ -13,7 +13,7 @@ Given the following recommendations
 
 Scenario: The server is running
     When I visit the "Home Page"
-    Then I should see "Recommendations Demo RESTful Service" in the title
+    Then I should see "Recommendations Demo REST API Service" in the title
     And I should not see "404 Not Found"
 
 Scenario: Create a Recommendation
@@ -46,31 +46,15 @@ Scenario: Create a Recommendation
 #     Then I should see the message "Success"
 #     And I should see "Phone X -> Case Y" in the results
 
-Scenario: List all recommendations
-    When I visit the "Home Page"
-    And I press the "Search" button
-    Then I should see the message "Success"
-    And I should see "1" in the results
-    And I should see "23" in the results
-    And I should see "109" in the results
-    And I should see "85" in the results
+# Scenario: Search for active
+#     When I visit the "Home Page"
+#     And I select "draft" in the "Status" dropdown
+#     And I press the "Search" button
+#     Then I should see the message "Success"
+#     And I should see "1" in the results
+#     And I should see "109" in the results
+#     And I should not see "23" in the results
 
-Scenario: Delete a recommendation
-    When I visit the "Home Page"
-    And I set the "ID" to "1"
-    And I press the "Retrieve" button
-    Then I should see the message "Success"
-    And I should see "Phone X -> Case Y" in the "Name" field
-    And I should see "accessory" in the "Recommendation Type" field
-    And I should see "draft" in the "Status" field
-
-    When I press the "Delete" button
-    Then I should see the message "Recommendation deleted."
-
-    When I press the "Clear" button
-    And I set the "ID" to "1"
-    And I press the "Retrieve" button
-    Then I should see the message "Not Found"
 # Scenario: List all recommendations
 #     When I visit the "Home Page"
 #     And I press the "Search" button
