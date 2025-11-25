@@ -46,20 +46,69 @@ Scenario: Create a Recommendation
 #     Then I should see the message "Success"
 #     And I should see "Phone X -> Case Y" in the results
 
-# Scenario: Search for active
-#     When I visit the "Home Page"
-#     And I select "draft" in the "Status" dropdown
-#     And I press the "Search" button
-#     Then I should see the message "Success"
-#     And I should see "1" in the results
-#     And I should see "109" in the results
-#     And I should not see "23" in the results
+Scenario: List all recommendations
+    When I visit the "Home Page"
+    And I press the "List" button
+    Then I should see the message "Success"
+    And I should see "Phone X -> Case Y" in the results
+    And I should see "Clothes X -> Clothes Y" in the results
+    And I should see "Jeans X -> Belt Y" in the results
+    And I should see "Bag X -> Bag Y" in the results
 
-# Scenario: List all recommendations
-#     When I visit the "Home Page"
-#     And I press the "Search" button
-#     Then I should see the message "Success"
-#     And I should see "1" in the results
-#     And I should see "23" in the results
-#     And I should see "109" in the results
-#     And I should see "85" in the results
+Scenario: Like a recommendation
+    When I visit the "Home Page"
+    And I press the "Clear" button
+    And I set the "base_product_id" to "345"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "345" in the "base_product_id" field
+    And I should see "873" in the "recommended_product_id" field
+    And I should see "up_sell" in the "recommendation_type" dropdown
+    And I should see "active" in the "status" dropdown
+    And I should see "23" in the "likes" field
+    When I press the "Like" button
+    Then I should see "24" in the "likes" field
+
+
+Scenario: Dislike a recommendation
+    When I visit the "Home Page"
+    And I press the "Clear" button
+    And I set the "base_product_id" to "345"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "345" in the "base_product_id" field
+    And I should see "873" in the "recommended_product_id" field
+    And I should see "up_sell" in the "recommendation_type" dropdown
+    And I should see "active" in the "status" dropdown
+    And I should see "23" in the "likes" field
+    When I press the "Dislike" button
+    Then I should see "22" in the "likes" field
+
+
+
+
+Scenario: Search for draft recommendations
+    When I visit the "Home Page"
+    And I press the "Clear" button
+    And I select "draft" in the "status" dropdown
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "Jeans X -> Belt Y" in the results
+    And I should see "Phone X -> Case Y" in the results
+    And I should not see "Clothes X -> Clothes" in the results
+
+Scenario: Delete a recommendation
+    When I visit the "Home Page"
+    And I press the "Clear" button
+    And I set the "base_product_id" to "101"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "Phone X -> Case Y" in the "Name" field
+    And I should see "accessory" in the "Recommendation Type" field
+    And I should see "draft" in the "Status" field
+    When I press the "Delete" button
+    Then I should see the message "Recommendation deleted."
+    When I press the "Clear" button
+    And I set the "id" to "1"
+    And I press the "Retrieve" button
+    Then I should see the message "404 Not Found"
