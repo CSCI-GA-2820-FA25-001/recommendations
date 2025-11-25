@@ -155,3 +155,24 @@ Scenario: Activate a Recommendation
     And I press the "Search" button
     Then I should see the message "Success"
     And I should see "active" in the "status" field
+
+Scenario: Deactivate a Recommendation
+    When I visit the "Home Page"
+    And I press the "Clear" button
+    And I set the "base_product_id" to "345"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "Clothes X -> Clothes Y" in the "name" field
+    And I should see "345" in the "base_product_id" field
+    And I should see "873" in the "recommended_product_id" field
+    And I should see "up_sell" in the "recommendation_type" dropdown
+    And I should see "active" in the "status" dropdown
+    When I select "inactive" in the "status" dropdown
+    And I press the "Update" button
+    Then I should see the message "Updated successfully."
+    When I copy the "base_product_id" field
+    And I press the "Clear" button
+    And I paste the "base_product_id" field
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "active" in the "status" field
