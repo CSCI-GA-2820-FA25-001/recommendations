@@ -4,16 +4,16 @@ Feature: The recommendation service back-end
     So that I can keep track of all recommendation
 
 Background:
-Given the following recommendations
-        | Recommendation Id    | Name                     |Base Product ID | Recommended Product ID | Recommendation Type  | Status   | Likes
-        | 1                    | Phone X -> Case Y        |101             | 201                    | accessory            | draft    | 0
-        | 23                   | Clothes X -> Clothes Y   |345             | 873                    | up_sell              | active   | 23
-        | 109                  | Jeans X -> Belt Y        |723             | 908                    | cross_sell           | draft    | 0
-        | 85                   | Bag X -> Bag Y           |196             | 292                    | trending             | inactive | 45
+    Given the following recommendations
+        | id | name                   | base_product_id | recommended_product_id | recommendation_type | status   | likes |
+        | 1  | Phone X -> Case Y      | 101             | 201                    | accessory           | draft    | 0     |
+        | 23 | Clothes X -> Clothes Y | 345             | 873                    | up_sell             | active   | 23    |
+        | 109| Jeans X -> Belt Y      | 723             | 908                    | cross_sell          | draft    | 0     |
+        | 85 | Bag X -> Bag Y         | 196             | 292                    | trending            | inactive | 45    |
 
 Scenario: The server is running
     When I visit the "Home Page"
-    Then I should see "Recommendations Demo REST API Service" in the title
+    Then I should see "Recommendations Demo RESTful Service" in the title
     And I should not see "404 Not Found"
 
 Scenario: Create a Recommendation
