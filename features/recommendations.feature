@@ -40,3 +40,20 @@ Scenario: List all recommendations
     And I should see "23" in the results
     And I should see "109" in the results
     And I should see "85" in the results
+
+Scenario: Delete a recommendation
+    When I visit the "Home Page"
+    And I set the "ID" to "1"
+    And I press the "Retrieve" button
+    Then I should see the message "Success"
+    And I should see "Phone X -> Case Y" in the "Name" field
+    And I should see "accessory" in the "Recommendation Type" field
+    And I should see "draft" in the "Status" field
+
+    When I press the "Delete" button
+    Then I should see the message "Recommendation deleted."
+
+    When I press the "Clear" button
+    And I set the "ID" to "1"
+    And I press the "Retrieve" button
+    Then I should see the message "Not Found"
