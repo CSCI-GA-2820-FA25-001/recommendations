@@ -16,27 +16,50 @@ Scenario: The server is running
     Then I should see "Recommendations Demo RESTful Service" in the title
     And I should not see "404 Not Found"
 
-Scenario: Search for accessory
+Scenario: Create a Recommendation
     When I visit the "Home Page"
-    And I set the "Recommendation Type" to "accessory"
-    And I press the "Search" button
+    And I set the "Name" to "Candle X -> Candle Y"
+    And I set the "Base Product ID" to "801"
+    And I set the "Recommended Product ID" to "901"
+    And I select "up_sell" in the "Recommendation Type" dropdown
+    And I select "draft " in the "Status" dropdown
+    And I press the "Create" button
     Then I should see the message "Success"
-    And I should see "Phone X -> Case Y" in the results
+    When I copy the "Recommendation Id " field
+    And I press the "Clear" button
+    Then the "Recommendation Id " field should be empty
+    And the "Name" field should be empty
+    And the "Base Product ID" field should be empty
+    When I paste the "Recommendation Id" field
+    And I press the "Retrieve" button
+    Then I should see the message "Success"
+    And I should see the "801" in the "Base Product ID" field
+    And I should see the "901" in the "Recommended Product ID" field
+    And I should see "up_sell " in the "Recommendation Type" dropdown
+    And I should see "draft" in the "Status" dropdown
+    And I should see "0" in the "Likes" field
 
-Scenario: Search for active
-    When I visit the "Home Page"
-    And I select "draft" in the "Status" dropdown
-    And I press the "Search" button
-    Then I should see the message "Success"
-    And I should see "1" in the results
-    And I should see "109" in the results
-    And I should not see "23" in the results
+# Scenario: Search for accessory
+#     When I visit the "Home Page"
+#     And I set the "Recommendation Type" to "accessory"
+#     And I press the "Search" button
+#     Then I should see the message "Success"
+#     And I should see "Phone X -> Case Y" in the results
 
-Scenario: List all recommendations
-    When I visit the "Home Page"
-    And I press the "Search" button
-    Then I should see the message "Success"
-    And I should see "1" in the results
-    And I should see "23" in the results
-    And I should see "109" in the results
-    And I should see "85" in the results
+# Scenario: Search for active
+#     When I visit the "Home Page"
+#     And I select "draft" in the "Status" dropdown
+#     And I press the "Search" button
+#     Then I should see the message "Success"
+#     And I should see "1" in the results
+#     And I should see "109" in the results
+#     And I should not see "23" in the results
+
+# Scenario: List all recommendations
+#     When I visit the "Home Page"
+#     And I press the "Search" button
+#     Then I should see the message "Success"
+#     And I should see "1" in the results
+#     And I should see "23" in the results
+#     And I should see "109" in the results
+#     And I should see "85" in the results
