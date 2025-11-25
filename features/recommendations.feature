@@ -97,6 +97,20 @@ Scenario: Search for draft recommendations
     And I should see "Phone X -> Case Y" in the results
     And I should not see "Clothes X -> Clothes" in the results
 
-
+Scenario: Delete a recommendation        
+    When I visit the "Home Page"                                    
+    And I press the "Clear" button                                  
+    And I set the "base_product_id" to "101"                        
+    And I press the "Search" button                                
+    Then I should see the message "Success"                      
+    And I should see "Phone X -> Case Y" in the "Name" field        
+    And I should see "accessory" in the "Recommendation Type" field 
+    And I should see "draft" in the "Status" field                  
+    When I press the "Delete" button                               
+    Then I should see the message "Recommendation deleted."         
+    When I press the "Clear" button                               
+    And I set the "id" to "1"                                     
+    And I press the "Retrieve" button                      
+    Then I should see the message "404 Not Found"  
 
 
