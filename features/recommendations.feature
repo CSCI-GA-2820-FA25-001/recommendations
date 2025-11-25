@@ -98,5 +98,28 @@ Scenario: Search for draft recommendations
     And I should not see "Clothes X -> Clothes" in the results
 
 
-
+Scenario: Update a Recommendation
+    When I visit the "Home Page"
+    And I press the "Clear" button
+    And I set the "base_product_id" to "723"
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "Jeans X -> Belt Y" in the "name" field
+    And I should see "723" in the "base_product_id" field
+    And I should see "908" in the "recommended_product_id" field
+    And I should see "cross_sell" in the "recommendation_type" dropdown
+    When I change "name" to "Jeans X -> Premium Belt Y"
+    And I press the "Update" button
+    Then I should see the message "Updated successfully."
+    When I copy the "base_product_id" field
+    And I press the "Clear" button
+    And I paste the "base_product_id" field
+    And I press the "Search" button
+    Then I should see the message "Success"
+    And I should see "Jeans X -> Premium Belt Y" in the "name" field
+    When I press the "Clear" button
+    And I press the "List" button
+    Then I should see the message "Success"
+    And I should see "Jeans X -> Premium Belt Y" in the results
+    And I should not see "Jeans X -> Belt Y" in the results
 
