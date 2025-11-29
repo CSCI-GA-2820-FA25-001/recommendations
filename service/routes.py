@@ -22,7 +22,6 @@ Delete, and List Recommendations.
 """
 from datetime import datetime
 import uuid
-from flask import jsonify
 from flask import current_app as app  # Import Flask application
 from flask_restx import Api, Resource, fields, reqparse
 from service.models import Recommendation, RecommendationType, RecommendationStatus
