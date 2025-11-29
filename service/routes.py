@@ -22,10 +22,25 @@ Delete, and List Recommendations.
 """
 from datetime import datetime
 import uuid
-from flask import jsonify, request, url_for, abort
+from flask import request
 from flask import current_app as app  # Import Flask application
+from flask_restx import Api, Resource, fields, reqparse, inputs
 from service.models import Recommendation, RecommendationType, RecommendationStatus
 from service.common import status  # HTTP Status Codes
+
+######################################################################
+# Configure Swagger before initializing it
+######################################################################
+api = Api(
+    app,
+    version="1.0.0",
+    title="Recommendation Demo REST API Service",
+    description="This is a sample Recommendation services server.",
+    default="recommendations",
+    default_label="Recommendation shop operations",
+    doc="/apidocs",  # default also could use doc='/apidocs/'
+    prefix="/api",
+)
 
 
 ######################################################################
@@ -71,36 +86,38 @@ def get_recommendations(recommendation_id):
 
 
 ######################################################################
-# CREATE A NEW Recommendation
+#  PATH: /recommendations
 ######################################################################
-@app.route("/recommendations", methods=["POST"])
-def create_recommendations():
-    """
-    Create a Recommendation
-    This endpoint will create a Recommendation based the data in the body that is posted
-    """
-    app.logger.info("Request to Create a Recommendation...")
-    check_content_type("application/json")
+@api.route("/recommendations", strict_slashes=False)
+class RecommendationCollection(Resource):
+    """Handles all interactions with collections of Recommendations"""
 
-    recommendation = Recommendation()
-    # Get the data from the request and deserialize it
-    data = request.get_json()
-    app.logger.info("Processing: %s", data)
-    recommendation.deserialize(data)
-
-    # Save the new Recommendation to the database
-    recommendation.create()
-    app.logger.info("Recommendation with new id [%s] saved!", recommendation.id)
-
-    # Return the location of the new Recommendation
-    location_url = url_for(
-        "get_recommendations", recommendation_id=recommendation.id, _external=True
-    )
-    return (
-        jsonify(recommendation.serialize()),
-        status.HTTP_201_CREATED,
-        {"Location": location_url},
-    )
+    ######################################################################
+    # CREATE A NEW Recommendation
+    ######################################################################
+    @api.doc("create_recommendations")
+    @api.response(400, "The posted data was not valid")
+    @api.expect(create_model)
+    @api.marshal_with(recommendation_model, code=201)
+    def post(self):
+        """
+        Creates a Recommendation
+        This endpoint will create a Recommendation based the data in the body that is posted
+        """
+        app.logger.info("Request to Create a Recommendation")
+        recommendation = Recommendation()
+        app.logger.debug("Payload = %s", api.payload)
+        recommendation.deserialize(api.payload)
+        recommendation.create()
+        app.logger.info("Recommendation with new id [%s] created!", recommendation.id)
+        location_url = api.url_for(
+            RecommendationResource, recommendation_id=recommendation.id, _external=True
+        )
+        return (
+            recommendation.serialize(),
+            status.HTTP_201_CREATED,
+            {"Location": location_url},
+        )
 
 
 ######################################################################
@@ -285,63 +302,69 @@ def list_recommendations():
 
 
 ######################################################################
-# LIKE a Recommendation
+#  PATH: /recommendations/{id}/like
 ######################################################################
-@app.route("/recommendations/<int:recommendation_id>/like", methods=["PUT"])
-def like_a_recommendation(recommendation_id):
-    """Increase the likes of a recommendation"""
-    app.logger.info("Request to like a recommendation with id: %d", recommendation_id)
+@api.route("/recommendations/<recommendation_id>/like")
+@api.param("recommendation_id", "The Recommendation identifier")
+class LikesResource(Resource):
+    """Like/dislike a Recommendation"""
 
-    # Attempt to find the Recommendation and abort if not found
-    recommendation = Recommendation.find(recommendation_id)
-    if not recommendation:
-        abort(
-            status.HTTP_404_NOT_FOUND,
-            f"Recommendation with id '{recommendation_id}' was not found.",
-        )
+    @api.doc("like_recommendations")
+    @api.response(404, "Recommendation not found")
+    @api.response(409, "Cannot like a recommendation that is not active")
+    def put(self, recommendation_id):
+        """
+        like a Recommendation
 
-    # you can only like recommendations that are active
-    if not recommendation.status == RecommendationStatus.ACTIVE:
-        abort(
-            status.HTTP_409_CONFLICT,
-            f"Recommendation with id '{recommendation_id}' is not active.",
-        )
-
-    recommendation.likes += 1
-    recommendation.update()
-
-    app.logger.info("Recommendation with ID: %d has been liked.", recommendation_id)
-    return recommendation.serialize(), status.HTTP_200_OK
-
-
-######################################################################
-# DISLIKE a Recommendation
-######################################################################
-@app.route("/recommendations/<int:recommendation_id>/like", methods=["DELETE"])
-def dislike_a_recommendation(recommendation_id):
-    """decrease the likes of a recommendation"""
-    app.logger.info("Request to like a recommendation with id: %d", recommendation_id)
-
-    # Attempt to find the Recommendation and abort if not found
-    recommendation = Recommendation.find(recommendation_id)
-    if not recommendation:
-        abort(
-            status.HTTP_404_NOT_FOUND,
-            f"Recommendation with id '{recommendation_id}' was not found.",
-        )
-
-    # you can only like recommendations that are active
-    if not recommendation.status == RecommendationStatus.ACTIVE:
-        abort(
-            status.HTTP_409_CONFLICT,
-            f"Recommendation with id '{recommendation_id}' is not active.",
-        )
-    if recommendation.likes > 0:
-        recommendation.likes -= 1
+        This endpoint will like a recommendation
+        """
+        app.logger.info("Request to like a recommendation")
+        recommendation = Recommendation.find(recommendation_id)
+        if not recommendation:
+            abort(
+                status.HTTP_404_NOT_FOUND,
+                f"Recommendation with id [{recommendation_id}] was not found.",
+            )
+        if not RecommendationStatus.ACTIVE:
+            abort(
+                status.HTTP_409_CONFLICT,
+                f"Recommendation with id [{recommendation_id}] is not active.",
+            )
+        recommendation.likes += 1
         recommendation.update()
+        app.logger.info(
+            "Recommendation with id [%s] has been liked!", recommendation.id
+        )
+        return recommendation.serialize(), status.HTTP_200_OK
 
-    app.logger.info("Recommendation with ID: %d has been disliked.", recommendation_id)
-    return recommendation.serialize(), status.HTTP_200_OK
+    @api.doc("dislike_recommendations")
+    @api.response(404, "Recommendation not found")
+    @api.response(409, "Cannot dislike a recommendation that is not active")
+    def delete(self, recommendation_id):
+        """
+        Dislike a Recommendation
+
+        This endpoint will dislike a recommendation
+        """
+        app.logger.info("Request to dislike a recommendation")
+        recommendation = Recommendation.find(recommendation_id)
+        if not recommendation:
+            abort(
+                status.HTTP_404_NOT_FOUND,
+                f"Recommendation with id [{recommendation_id}] was not found.",
+            )
+        if not RecommendationStatus.ACTIVE:
+            abort(
+                status.HTTP_409_CONFLICT,
+                f"Recommendation with id [{recommendation_id}] is not active.",
+            )
+        if recommendation.likes > 0:
+            recommendation.likes -= 1
+            recommendation.update()
+        app.logger.info(
+            "Recommendation with id [%s] has been disliked!", recommendation.id
+        )
+        return recommendation.serialize(), status.HTTP_200_OK
 
 
 ######################################################################
@@ -470,3 +493,19 @@ def reactivate_recommendation(recommendation_id):
         )
 
     return jsonify(recommendation.serialize()), status.HTTP_200_OK
+
+
+######################################################################
+#  U T I L I T Y   F U N C T I O N S
+######################################################################
+
+
+def abort(error_code: int, message: str):
+    """Logs errors before aborting"""
+    app.logger.error(message)
+    api.abort(error_code, message)
+
+
+def data_reset():
+    """Removes all Pets from the database"""
+    Recommendation.remove_all()
