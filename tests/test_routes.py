@@ -531,7 +531,7 @@ class TestRecommendation(TestCase):
 
     def test_cancel_recommendation_not_found(self):
         """It should not cancel a Recommendation thats not found"""
-        response = self.client.put(f"{BASE_URL}/0", json={"status": "inactive"})
+        response = self.client.put(f"{BASE_URL}/999999/cancel")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         data = response.get_json()
         logging.debug("Response data = %s", data)
@@ -581,7 +581,7 @@ class TestRecommendation(TestCase):
 
     def test_reactivate_recommendation_not_found(self):
         """It should not reactivate a Recommendation thats not found"""
-        response = self.client.put(f"{BASE_URL}/0", json={"status": "active"})
+        response = self.client.put(f"{BASE_URL}/999999/activate")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         data = response.get_json()
         logging.debug("Response data = %s", data)
