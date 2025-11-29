@@ -41,7 +41,7 @@ $(function () {
 
     $.ajax({
       type: "POST",
-      url: "/recommendations",
+      url: "/api/recommendations",
       contentType: "application/json",
       data: JSON.stringify(body),
     })
@@ -73,7 +73,7 @@ $(function () {
 
     $.ajax({
       type: "PUT",
-      url: `/recommendations/${id}`,
+      url: `/api/recommendations/${id}`,
       contentType: "application/json",
       data: JSON.stringify(body)
     })
@@ -96,7 +96,7 @@ $(function () {
 
     $.ajax({
       type: "GET",
-      url: `/recommendations/${id}`,
+      url: `/api/recommendations/${id}`,
       contentType: "application/json"
     })
     .done(function (res) {
@@ -105,7 +105,11 @@ $(function () {
     })
     .fail(function (res) {
       clear_form_data();
-      flash_message(res.responseJSON?.message || "Not Found");
+      if (res.status === 404) {
+        flash_message("404 Not Found");
+      } else {
+        flash_message(res.responseJSON?.message || "Error");
+      }
     });
   });
 
@@ -116,7 +120,7 @@ $(function () {
 
     $.ajax({
       type: "GET",
-      url: "/recommendations",
+      url: "/api/recommendations",
       contentType: "application/json"
     })
     .done(function (res) {
@@ -161,7 +165,7 @@ $(function () {
 
     $.ajax({
       type: "DELETE",
-      url: `/recommendations/${id}`,
+      url: `/api/recommendations/${id}`,
       contentType: "application/json"
     })
     .done(function () {
@@ -197,7 +201,7 @@ $(function () {
 
     $.ajax({
       type: "GET",
-      url: `/recommendations?${params.toString()}`,
+      url: `/api/recommendations?${params.toString()}`,
       contentType: "application/json"
     })
     .done(function (res) {
@@ -242,7 +246,7 @@ $(function () {
 
     $.ajax({
       type: "PUT",
-      url: `/recommendations/${id}/like`,
+      url: `/api/recommendations/${id}/like`,
       contentType: "application/json"
     })
     .done(function (res) {
@@ -262,7 +266,7 @@ $(function () {
 
     $.ajax({
       type: "DELETE",
-      url: `/recommendations/${id}/like`,
+      url: `/api/recommendations/${id}/like`,
       contentType: "application/json"
     })
     .done(function (res) {
