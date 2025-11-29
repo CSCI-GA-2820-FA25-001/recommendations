@@ -662,6 +662,22 @@ class TestSadPaths(TestCase):
         body = response.get_json()
         self.assertIn("not found", body["message"].lower())
 
+    def test_list_recommendations_with_valid_sort(self):
+        """It should list recommendations with valid sort parameter"""
+        # Create some recommendations
+        for _ in range(3):
+            recommendation = RecommendationFactory()
+            recommendation.create()
+
+        # Use valid sort parameter
+        resp = self.client.get(f"{BASE_URL}?sort=name_asc")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        self.assertIsInstance(data, list)
+        # Verify they're sorted by name
+        names = [rec["name"] for rec in data]
+        self.assertEqual(names, sorted(names))
+
     def test_list_recommendations_invalid_sort(self):
         """It should return 400 for invalid sort parameter"""
         # Create some recommendations
@@ -677,8 +693,43 @@ class TestSadPaths(TestCase):
         """It should return 404 when liking non-existent recommendation"""
         response = self.client.put(f"{BASE_URL}/99999/like")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        data = response.get_json()
+        self.assertIn("Not Found", data["message"])
 
     def test_dislike_recommendation_not_found(self):
         """It should return 404 when disliking non-existent recommendation"""
         response = self.client.delete(f"{BASE_URL}/99999/like")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        data = response.get_json()
+        self.assertIn("Not Found", data["message"])
+
+    def test_cancel_already_inactive_recommendation(self):
+        """It should be idempotent when canceling already inactive recommendation"""
+        # Create an inactive recommendation
+        rec = RecommendationFactory()
+        rec.status = RecommendationStatus.INACTIVE
+        response = self.client.post(BASE_URL, json=rec.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.get_json()
+        rec_id = data["id"]
+
+        response = self.client.put(f"{BASE_URL}/{rec_id}/cancel")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(data["status"], "inactive")
+
+    def test_activate_already_active_recommendation(self):
+        """It should be idempotent when activating already active recommendation"""
+        # Create an active recommendation
+        rec = RecommendationFactory()
+        rec.status = RecommendationStatus.ACTIVE
+        response = self.client.post(BASE_URL, json=rec.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.get_json()
+        rec_id = data["id"]
+
+        # Try to activate it again (should be idempotent)
+        response = self.client.put(f"{BASE_URL}/{rec_id}/activate")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(data["status"], "active")
