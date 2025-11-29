@@ -170,7 +170,7 @@ class RecommendationResource(Resource):
         app.logger.info("Request for Recommendation with id: %s", recommendation_id)
         recommendation = Recommendation.find(recommendation_id)
         if not recommendation:
-            abort(status.HTTP_404_NOT_FOUND, "Recommendation not found")
+            abort(status.HTTP_404_NOT_FOUND, "Recommendation Not Found")
         app.logger.info("Returning recommendation: %s", recommendation.name)
         return recommendation.serialize(), status.HTTP_200_OK
 
@@ -193,10 +193,7 @@ class RecommendationResource(Resource):
         )
         recommendation = Recommendation.find(recommendation_id)
         if not recommendation:
-            abort(
-                status.HTTP_404_NOT_FOUND,
-                f"Recommendation with id '{recommendation_id}' was not found.",
-            )
+            abort(status.HTTP_404_NOT_FOUND, "Recommendation Not Found")
         app.logger.debug("Payload = %s", api.payload)
         data = api.payload
         recommendation.deserialize(data)
@@ -365,10 +362,7 @@ class LikeResource(Resource):
         )
         recommendation = Recommendation.find(recommendation_id)
         if not recommendation:
-            abort(
-                status.HTTP_404_NOT_FOUND,
-                f"Recommendation with id '{recommendation_id}' was not found.",
-            )
+            abort(status.HTTP_404_NOT_FOUND, "Recommendation Not Found")
         if recommendation.status != RecommendationStatus.ACTIVE:
             abort(
                 status.HTTP_409_CONFLICT,
@@ -394,10 +388,7 @@ class LikeResource(Resource):
         )
         recommendation = Recommendation.find(recommendation_id)
         if not recommendation:
-            abort(
-                status.HTTP_404_NOT_FOUND,
-                f"Recommendation with id '{recommendation_id}' was not found.",
-            )
+            abort(status.HTTP_404_NOT_FOUND, "Recommendation Not Found")
         if recommendation.status != RecommendationStatus.ACTIVE:
             abort(
                 status.HTTP_409_CONFLICT,
@@ -433,11 +424,7 @@ class SendResource(Resource):
         )
         recommendation = Recommendation.find(recommendation_id)
         if not recommendation:
-            abort(
-                status.HTTP_404_NOT_FOUND,
-                f"Recommendation with id '{recommendation_id}' was not found.",
-            )
-
+            abort(status.HTTP_404_NOT_FOUND, "Recommendation Not Found")
         recommendation.merchant_send_count += 1
         recommendation.last_sent_at = datetime.utcnow()
         recommendation.update()
@@ -480,7 +467,7 @@ class CancelResource(Resource):
         )
         recommendation = Recommendation.find(recommendation_id)
         if not recommendation:
-            abort(status.HTTP_404_NOT_FOUND, "Recommendation not found")
+            abort(status.HTTP_404_NOT_FOUND, "Recommendation Not Found")
         if recommendation.status != RecommendationStatus.INACTIVE:
             recommendation.status = RecommendationStatus.INACTIVE
             recommendation.update()
@@ -517,7 +504,7 @@ class ActivateResource(Resource):
         )
         recommendation = Recommendation.find(recommendation_id)
         if not recommendation:
-            abort(status.HTTP_404_NOT_FOUND, "Recommendation not found")
+            abort(status.HTTP_404_NOT_FOUND, "Recommendation Not Found")
         if recommendation.status != RecommendationStatus.ACTIVE:
             recommendation.status = RecommendationStatus.ACTIVE
             recommendation.update()
