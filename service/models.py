@@ -114,9 +114,11 @@ class Recommendation(db.Model):  # pylint: disable=too-many-instance-attributes
             "status": self.status.value,
             "likes": self.likes,
             "merchant_send_count": self.merchant_send_count,
-            "last_sent_at": self.last_sent_at,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "last_sent_at": (
+                self.last_sent_at.isoformat() if self.last_sent_at else None
+            ),
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
     def deserialize(self, data: dict):

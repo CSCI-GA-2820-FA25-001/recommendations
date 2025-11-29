@@ -244,7 +244,7 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Get all recommendations
-        resp = self.client.get("/recommendations")
+        resp = self.client.get(BASE_URL)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -263,7 +263,7 @@ class TestRecommendation(TestCase):
 
     def test_list_recommendations_empty(self):
         """It should return an empty list when no recommendations exist"""
-        resp = self.client.get("/recommendations")
+        resp = self.client.get(BASE_URL)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -286,7 +286,7 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Query by product_a_id
-        resp = self.client.get(f"/recommendations?product_a_id={target_product_id}")
+        resp = self.client.get(f"{BASE_URL}?product_a_id={target_product_id}")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -314,7 +314,7 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Query by relationship_type
-        resp = self.client.get("/recommendations?relationship_type=accessory")
+        resp = self.client.get(f"{BASE_URL}?relationship_type=accessory")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -338,7 +338,7 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Query by status
-        resp = self.client.get("/recommendations?status=active")
+        resp = self.client.get(f"{BASE_URL}?status=active")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -375,7 +375,7 @@ class TestRecommendation(TestCase):
 
         # Query with multiple filters
         resp = self.client.get(
-            f"/recommendations?product_a_id={target_product_id}"
+            f"{BASE_URL}?product_a_id={target_product_id}"
             f"&relationship_type=accessory&status=active"
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
@@ -399,7 +399,7 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Use invalid type value
-        resp = self.client.get("/recommendations?relationship_type=invalid_type")
+        resp = self.client.get(f"{BASE_URL}?relationship_type=invalid_type")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -416,7 +416,7 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Use invalid status value
-        resp = self.client.get("/recommendations?status=invalid_status")
+        resp = self.client.get(f"{BASE_URL}?status=invalid_status")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -433,7 +433,7 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Query for non-existent product_id
-        resp = self.client.get("/recommendations?base_product_id=999")
+        resp = self.client.get(f"{BASE_URL}?base_product_id=999")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
