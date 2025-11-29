@@ -662,26 +662,23 @@ class TestSadPaths(TestCase):
         body = response.get_json()
         self.assertIn("not found", body["message"].lower())
 
+    def test_list_recommendations_invalid_sort(self):
+        """It should return 400 for invalid sort parameter"""
+        # Create some recommendations
+        for _ in range(3):
+            recommendation = RecommendationFactory()
+            recommendation.create()
 
-def test_list_recommendations_invalid_sort(self):
-    """It should return 400 for invalid sort parameter"""
-    # Create some recommendations
-    for _ in range(3):
-        recommendation = RecommendationFactory()
-        recommendation.create()
+        # Use invalid sort value
+        resp = self.client.get(f"{BASE_URL}?sort=invalid_sort")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
-    # Use invalid sort value
-    resp = self.client.get(f"{BASE_URL}?sort=invalid_sort")
-    self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+    def test_like_recommendation_not_found(self):
+        """It should return 404 when liking non-existent recommendation"""
+        response = self.client.put(f"{BASE_URL}/99999/like")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-
-def test_like_recommendation_not_found(self):
-    """It should return 404 when liking non-existent recommendation"""
-    response = self.client.put(f"{BASE_URL}/99999/like")
-    self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-
-
-def test_dislike_recommendation_not_found(self):
-    """It should return 404 when disliking non-existent recommendation"""
-    response = self.client.delete(f"{BASE_URL}/99999/like")
-    self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    def test_dislike_recommendation_not_found(self):
+        """It should return 404 when disliking non-existent recommendation"""
+        response = self.client.delete(f"{BASE_URL}/99999/like")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
