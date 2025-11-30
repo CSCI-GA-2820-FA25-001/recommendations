@@ -31,7 +31,3 @@ spec:
           resources:
             requests:
               storage: 1Gi
-  podTemplate:
-    securityContext:
-      runAsNonRoot: false
-      runAsUser: 0
