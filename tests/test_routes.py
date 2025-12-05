@@ -36,7 +36,7 @@ from .factories import RecommendationFactory
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
 )
-BASE_URL = "/recommendations"
+BASE_URL = "/api/recommendations"
 
 
 ######################################################################
@@ -244,7 +244,7 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Get all recommendations
-        resp = self.client.get("/recommendations")
+        resp = self.client.get(BASE_URL)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -263,7 +263,7 @@ class TestRecommendation(TestCase):
 
     def test_list_recommendations_empty(self):
         """It should return an empty list when no recommendations exist"""
-        resp = self.client.get("/recommendations")
+        resp = self.client.get(BASE_URL)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -286,7 +286,7 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Query by product_a_id
-        resp = self.client.get(f"/recommendations?product_a_id={target_product_id}")
+        resp = self.client.get(f"{BASE_URL}?product_a_id={target_product_id}")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -314,7 +314,7 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Query by relationship_type
-        resp = self.client.get("/recommendations?relationship_type=accessory")
+        resp = self.client.get(f"{BASE_URL}?relationship_type=accessory")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -338,7 +338,7 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Query by status
-        resp = self.client.get("/recommendations?status=active")
+        resp = self.client.get(f"{BASE_URL}?status=active")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -375,7 +375,7 @@ class TestRecommendation(TestCase):
 
         # Query with multiple filters
         resp = self.client.get(
-            f"/recommendations?product_a_id={target_product_id}"
+            f"{BASE_URL}?product_a_id={target_product_id}"
             f"&relationship_type=accessory&status=active"
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
@@ -399,7 +399,7 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Use invalid type value
-        resp = self.client.get("/recommendations?relationship_type=invalid_type")
+        resp = self.client.get(f"{BASE_URL}?relationship_type=invalid_type")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -416,7 +416,7 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Use invalid status value
-        resp = self.client.get("/recommendations?status=invalid_status")
+        resp = self.client.get(f"{BASE_URL}?status=invalid_status")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -433,7 +433,7 @@ class TestRecommendation(TestCase):
             recommendation.create()
 
         # Query for non-existent product_id
-        resp = self.client.get("/recommendations?base_product_id=999")
+        resp = self.client.get(f"{BASE_URL}?base_product_id=999")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         data = resp.get_json()
@@ -531,7 +531,7 @@ class TestRecommendation(TestCase):
 
     def test_cancel_recommendation_not_found(self):
         """It should not cancel a Recommendation thats not found"""
-        response = self.client.put(f"{BASE_URL}/0", json={"status": "inactive"})
+        response = self.client.put(f"{BASE_URL}/999999/cancel")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         data = response.get_json()
         logging.debug("Response data = %s", data)
@@ -581,7 +581,7 @@ class TestRecommendation(TestCase):
 
     def test_reactivate_recommendation_not_found(self):
         """It should not reactivate a Recommendation thats not found"""
-        response = self.client.put(f"{BASE_URL}/0", json={"status": "active"})
+        response = self.client.put(f"{BASE_URL}/999999/activate")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         data = response.get_json()
         logging.debug("Response data = %s", data)
@@ -661,3 +661,75 @@ class TestSadPaths(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         body = response.get_json()
         self.assertIn("not found", body["message"].lower())
+
+    def test_list_recommendations_with_valid_sort(self):
+        """It should list recommendations with valid sort parameter"""
+        # Create some recommendations
+        for _ in range(3):
+            recommendation = RecommendationFactory()
+            recommendation.create()
+
+        # Use valid sort parameter
+        resp = self.client.get(f"{BASE_URL}?sort=name_asc")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        self.assertIsInstance(data, list)
+        # Verify they're sorted by name
+        names = [rec["name"] for rec in data]
+        self.assertEqual(names, sorted(names))
+
+    def test_list_recommendations_invalid_sort(self):
+        """It should return 400 for invalid sort parameter"""
+        # Create some recommendations
+        for _ in range(3):
+            recommendation = RecommendationFactory()
+            recommendation.create()
+
+        # Use invalid sort value
+        resp = self.client.get(f"{BASE_URL}?sort=invalid_sort")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_like_recommendation_not_found(self):
+        """It should return 404 when liking non-existent recommendation"""
+        response = self.client.put(f"{BASE_URL}/99999/like")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        data = response.get_json()
+        self.assertIn("Not Found", data["message"])
+
+    def test_dislike_recommendation_not_found(self):
+        """It should return 404 when disliking non-existent recommendation"""
+        response = self.client.delete(f"{BASE_URL}/99999/like")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        data = response.get_json()
+        self.assertIn("Not Found", data["message"])
+
+    def test_cancel_already_inactive_recommendation(self):
+        """It should be idempotent when canceling already inactive recommendation"""
+        # Create an inactive recommendation
+        rec = RecommendationFactory()
+        rec.status = RecommendationStatus.INACTIVE
+        response = self.client.post(BASE_URL, json=rec.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.get_json()
+        rec_id = data["id"]
+
+        response = self.client.put(f"{BASE_URL}/{rec_id}/cancel")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(data["status"], "inactive")
+
+    def test_activate_already_active_recommendation(self):
+        """It should be idempotent when activating already active recommendation"""
+        # Create an active recommendation
+        rec = RecommendationFactory()
+        rec.status = RecommendationStatus.ACTIVE
+        response = self.client.post(BASE_URL, json=rec.serialize())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        data = response.get_json()
+        rec_id = data["id"]
+
+        # Try to activate it again (should be idempotent)
+        response = self.client.put(f"{BASE_URL}/{rec_id}/activate")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(data["status"], "active")
