@@ -74,12 +74,12 @@ create_model = api.model(
             required=True, description="The recommended product ID"
         ),
         "recommendation_type": fields.String(
-            enum=RecommendationType._member_names_,
+            enum=[t.value for t in RecommendationType],  # ← PATCH 1 APPLIED
             required=True,
             description="The type of recommendation relationship",
         ),
         "status": fields.String(
-            enum=RecommendationStatus._member_names_,
+            enum=[s.value for s in RecommendationStatus],  # ← PATCH 1 APPLIED
             description="The status of the recommendation (default: ACTIVE)",
         ),
         "likes": fields.Integer(description="Number of likes (default: 0)"),
@@ -300,7 +300,6 @@ class RecommendationCollection(Resource):
             app.logger.info("Sorting by: %s", sort_param)
             query = query.order_by(valid_sort_fields[sort_param])
         else:
-            # Default sort by id
             query = query.order_by(Recommendation.id.asc())
 
         # Execute query
