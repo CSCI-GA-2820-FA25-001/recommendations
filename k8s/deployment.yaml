@@ -19,7 +19,17 @@ spec:
       labels:
         app: recommendations
     spec:
-      restartPolicy: Always
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.35
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z postgres 5432; do
+                echo "waiting for postgres..."
+                sleep 2
+              done
       containers:
       - name: recommendations
         image: cluster-registry:5000/recommendations:1.0
