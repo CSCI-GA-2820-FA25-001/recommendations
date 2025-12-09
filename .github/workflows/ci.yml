@@ -44,7 +44,7 @@ jobs:
           pylint service tests --max-line-length=127
       - name: Run unit tests with pytest
         env:
-          DATABASE_URI: postgresql+psycopg://postgres:pgs3cr3t@postgresql:5432/postgres
+          DATABASE_URI: postgresql+psycopg://postgres:pgs3cr3t@postgres:5432/postgres
         run: |
           export RETRY_COUNT=1
           pytest --pspec --cov=service --cov-report=xml --cov-report=term --cov-fail-under=95 --disable-warnings
