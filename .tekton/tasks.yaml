@@ -1,181 +1,298 @@
-# Tekton Tasks for Recommendations Service CI/CD Pipeline
-# These tasks define the individual steps in the pipeline
-
+# These are custom tasks that are not on Tekton Hub
 ---
-apiVersion: tekton.dev/v1
+apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: clone
+  name: pylint
   labels:
-    app: recommendations
+    app.kubernetes.io/version: "0.4"
+  annotations:
+    tekton.dev/categories: Code Quality
+    tekton.dev/pipelines.minVersion: "0.17.0"
+    tekton.dev/tags: python, pylint, poetry
+    tekton.dev/displayName: "pylint"
+    tekton.dev/platforms: "linux/amd64,linux/s390x,linux/ppc64le"
 spec:
-  description: Clone the repository to workspace
-  params:
-    - name: repo-url
-      type: string
-      description: The git repository URL to clone from
-    - name: branch
-      type: string
-      description: The git branch to clone
-      default: master
-  workspaces:
-    - name: output
-      description: The workspace to clone the repo into
-  steps:
-    - name: clone
-      image: bitnami/git:latest
-      script: |
-        #!/bin/bash
-        set -e
-        echo "Cloning $(params.repo-url) branch $(params.branch)"
-        git clone --depth 1 --branch $(params.branch) $(params.repo-url) $(workspaces.output.path)/source
-        echo "Clone completed successfully"
-        ls -la $(workspaces.output.path)/source
-
----
-apiVersion: tekton.dev/v1
-kind: Task
-metadata:
-  name: lint
-  labels:
-    app: recommendations
-spec:
-  description: Run linting checks with flake8 and pylint
   workspaces:
     - name: source
-      description: The workspace containing the source code
+      description: The workspace with the source code.
+  description: >-
+    Use to run pylint on the provided input source. 
+    If Poetry or Pipenv is being used it will detect 
+    the poetry.lock and Pipfile file and install using them.
+  params:
+    - name: image
+      description: The container image with pylint
+      default: quay.io/rofrano/python:3.11-slim
+    - name: path
+      description: The path to the module which should be analyzed by pylint
+      default: "."
+      type: string
+    - name: args
+      description: The arguments to pass to the pylint CLI.
+      type: array
+      default: []
+    - name: requirements-file
+      description: The name of the requirements file inside the source location
+      default: "requirements.txt"
   steps:
-    - name: flake8
-      image: python:3.11-slim
-      workingDir: $(workspaces.source.path)/source
-      script: |
-        #!/bin/bash
-        set -e
-        echo "Installing dependencies..."
-        pip install --quiet flake8 pylint
-        echo "Running flake8 syntax check..."
-        flake8 service tests --count --select=E9,F63,F7,F82 --show-source --statistics
-        echo "Running flake8 style check..."
-        flake8 service tests --count --max-complexity=10 --max-line-length=127 --statistics
-        echo "Lint check passed!"
-
     - name: pylint
-      image: python:3.11-slim
-      workingDir: $(workspaces.source.path)/source
+      image: $(params.image)
+      workingDir: $(workspaces.source.path)
       script: |
         #!/bin/bash
         set -e
-        pip install --quiet pylint pipenv
-        pipenv install --system --dev --quiet
-        echo "Running pylint..."
-        pylint service tests --max-line-length=127 || true
-        echo "Pylint check completed!"
+        export PATH=$PATH:$HOME/.local/bin:
+
+        echo "***** Installing dependencies *****"
+        if [ -e "poetry.lock" ]; then
+          echo "Found poetry.lock file: using poetry ..."
+          python -m pip install --upgrade pip poetry
+          poetry config virtualenvs.create false
+          poetry install
+        elif [ -e "Pipfile" ]; then
+          echo "Found Pipfile file: using pipenv ..."
+          python -m pip install --upgrade pip pipenv
+          pipenv install --system --dev
+        elif [ -n "$(params.requirements-file)" ] && [ -e "$(params.requirements-file)" ]; then
+          python -m pip install --user -r "$(params.requirements-file)"
+        fi
+
+        # Make sure pylint is installed
+        python -m pip install pylint
+
+        echo "***** Running Linting *****"
+        pylint $@ "$(params.path)"
+      args:
+        - "$(params.args)"
 
 ---
-apiVersion: tekton.dev/v1
+apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: tests
+  name: pytest-env
   labels:
-    app: recommendations
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/categories: Testing
+    tekton.dev/pipelines.minVersion: "0.17.0"
+    tekton.dev/tags: python, pytest
+    tekton.dev/displayName: "pytest tests"
+    tekton.dev/platforms: "linux/amd64,linux/s390x,linux/ppc64le"
 spec:
-  description: Run unit tests with pytest
-  params:
-    - name: database-uri
-      type: string
-      description: PostgreSQL connection string
-      default: "postgresql+psycopg://postgres:pgs3cr3t@postgres:5432/postgres"
   workspaces:
     - name: source
-      description: The workspace containing the source code
+  description: >-
+    This task can be used to perform unit tests with pytest.
+    It supports both requirements.txt, Pipfile, & poetry.lock files.
+
+    It also has the ability to create an environment variable
+    that is sourced from a Secret. This allows you to define
+    credentials that can be used to connect to a test database.
+  params:
+    - name: pytest-args
+      description: The arguments to pass to the pytest CLI.
+      type: array
+      default: []
+    - name: secret-name
+      description: The name of the secret containing a database_uri key
+      type: string
+      default: "postgres-creds"
+    - name: secret-key
+      description: The name of the key that contains the database uri
+      type: string
+      default: "database_uri"
   steps:
     - name: pytest
-      image: python:3.11-slim
-      workingDir: $(workspaces.source.path)/source
+      image: quay.io/rofrano/python:3.11-slim
+      workingDir: $(workspaces.source.path)
       env:
-        - name: DATABASE_URI
-          value: $(params.database-uri)
-        - name: RETRY_COUNT
-          value: "1"
+       - name: DATABASE_URI
+         valueFrom:
+           secretKeyRef:
+             name: $(params.secret-name)
+             key: $(params.secret-key)
       script: |
         #!/bin/bash
         set -e
-        echo "Installing dependencies..."
-        pip install --quiet pipenv
-        pipenv install --system --dev --quiet
-        echo "Running pytest..."
-        pytest --pspec --cov=service --cov-report=term --cov-fail-under=95 --disable-warnings
-        echo "Tests passed!"
+        export PATH=$PATH:$HOME/.local/bin:
 
----
-apiVersion: tekton.dev/v1
-kind: Task
-metadata:
-  name: build-image
-  labels:
-    app: recommendations
-spec:
-  description: Build and push Docker image using Kaniko
-  params:
-    - name: image-name
-      type: string
-      description: The name of the image to build
-      default: cluster-registry:5000/recommendations
-    - name: image-tag
-      type: string
-      description: The tag for the image
-      default: "1.0"
-  workspaces:
-    - name: source
-      description: The workspace containing the source code
-  results:
-    - name: image-url
-      description: The full URL of the built image
-  steps:
-    - name: build-and-push
-      image: gcr.io/kaniko-project/executor:latest
+        echo "***** Installing dependencies *****"
+        if [ -e "poetry.lock" ]; then
+          echo "Found poetry.lock file: using poetry ..."
+          python -m pip install --upgrade pip poetry
+          poetry config virtualenvs.create false
+          poetry install
+        elif [ -e "Pipfile" ]; then
+          echo "Found Pipfile file: using pipenv ..."
+          python -m pip install --upgrade pip pipenv
+          pipenv install --system --dev
+        elif -e "requirements.txt" ]; then
+          python -m pip install --user -r requirements.txt
+        fi
+
+        # Make sure pylint is installed
+        python -m pip install pytest
+
+        echo "***** Running Tests *****"
+        pytest --version
+        pytest
       args:
-        - --dockerfile=$(workspaces.source.path)/source/Dockerfile
-        - --context=$(workspaces.source.path)/source
-        - --destination=$(params.image-name):$(params.image-tag)
-        - --insecure
-        - --skip-tls-verify
-      env:
-        - name: DOCKER_CONFIG
-          value: /tekton/home/.docker
-    - name: output-image-url
-      image: busybox
-      script: |
-        #!/bin/sh
-        echo -n "$(params.image-name):$(params.image-tag)" | tee $(results.image-url.path)
+        - "$(params.pytest-args)"
 
 ---
-apiVersion: tekton.dev/v1
+apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: deploy
+  name: deploy-image
   labels:
-    app: recommendations
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/categories: Deployment
+    tekton.dev/pipelines.minVersion: "0.17.0"
+    tekton.dev/tags: openshift, deploy
+    tekton.dev/displayName: "deploy image"
+    tekton.dev/platforms: "linux/amd64"
 spec:
-  description: Deploy application to Kubernetes
-  params:
-    - name: manifest-dir
-      type: string
-      description: Directory containing Kubernetes manifests
-      default: k8s
   workspaces:
-    - name: source
-      description: The workspace containing the source code
+  - name: source  
+  description: >-
+    This task will update the deployment.yaml with the latest image name
+    and then apply that yaml file and it's service file.
+  params:
+  - name: image-name
+    description: The fully qualified name of the new image to deploy
+    type: string
+  - name: manifest-dir
+    description: The directory in source that contains yaml manifests
+    type: string
+    default: "k8s"
   steps:
     - name: deploy
-      image: bitnami/kubectl:latest
-      workingDir: $(workspaces.source.path)/source
+      image: quay.io/openshift/origin-cli:latest
+      workingDir: /workspace/source 
+      command: ["/bin/bash", "-c"]
+      args:
+        - |-
+          #!/bin/bash
+          set -e
+
+          echo Applying manifests in $(inputs.params.manifest-dir) directory
+
+          echo "**********************************************************************"
+          echo "Installing YQ..."
+          echo "**********************************************************************"
+          wget -qO /usr/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          chmod a+x /usr/bin/yq
+
+          echo "*********************  DEPLOYMENT  ***********************"
+          echo "Deploying $(inputs.params.image-name) ..."
+
+          yq -e -i '.spec.template.spec.containers[0].image="$(inputs.params.image-name)"' $(inputs.params.manifest-dir)/deployment.yaml
+          cat $(inputs.params.manifest-dir)/deployment.yaml
+
+          echo "************************************************************"
+          echo "OC APPLY..."
+          oc apply -f $(inputs.params.manifest-dir)/deployment.yaml
+          oc apply -f $(inputs.params.manifest-dir)/service.yaml
+
+          echo "************************************************************"
+          sleep 3
+          echo "Pods:"
+          oc get pods
+          echo ""
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: apply-manifests
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/categories: Deployment
+    tekton.dev/pipelines.minVersion: "0.17.0"
+    tekton.dev/tags: openshift, deploy
+    tekton.dev/displayName: "deploy"
+    tekton.dev/platforms: "linux/amd64"
+spec:
+  workspaces:
+  - name: source  
+  description: >-
+    This task will deploy all of the yaml files in the manifest folder.
+  params:
+  - name: manifest-dir
+    description: The directory in source that contains yaml manifests
+    type: string
+    default: "k8s"
+  steps:
+    - name: apply
+      image: quay.io/openshift/origin-cli:latest
+      workingDir: /workspace/source 
+      command: ["/bin/bash", "-c"]
+      args:
+        - |-
+          echo Applying manifests in $(inputs.params.manifest-dir) directory
+          oc apply -f $(inputs.params.manifest-dir)
+          echo -----------------------------------
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: behave
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/categories: Testing
+    tekton.dev/pipelines.minVersion: "0.17.0"
+    tekton.dev/tags: python, bdd, behave
+    tekton.dev/displayName: "bdd tests"
+    tekton.dev/platforms: "linux/amd64"
+spec:
+  workspaces:
+    - name: source
+  description: >-
+    This task can be used to perform bdd tests with behave.
+  params:
+    - name: base-url
+      description: The url of the application to test
+      type: string
+    - name: wait-seconds
+      description: The number of seconds to wait for a reply
+      type: string
+      default: "60"
+    - name: driver
+      description: The web driver to use (chrome or firefox)
+      type: string
+      default: "chrome"
+  steps:
+    - name: behave
+      image: quay.io/rofrano/pipeline-selenium
+      workingDir: $(workspaces.source.path)
+      env:
+       - name: BASE_URL
+         value: $(params.base-url)
+       - name: WAIT_SECONDS
+         value: $(params.wait-seconds)
+       - name: DRIVER
+         value: $(params.driver)
       script: |
         #!/bin/bash
         set -e
-        echo "Applying Kubernetes manifests from $(params.manifest-dir)/"
-        kubectl apply -f $(params.manifest-dir)/
-        echo "Waiting for deployment to be ready..."
-        kubectl wait --for=condition=Available deployment/recommendations --timeout=120s || true
-        echo "Deployment completed!"
-        kubectl get pods -l app=recommendations
+        export PATH=$PATH:$HOME/.local/bin:
+
+        echo "***** Installing dependencies *****"
+        if [ -e "poetry.lock" ]; then
+          echo "Found poetry.lock file: using poetry"
+          python -m pip install poetry poetry-plugin-export
+          poetry export --with=dev -f requirements.txt --output requirements.txt
+        elif [ -e "Pipfile" ]; then
+          echo "Found Pipfile file: using pipenv ..."
+          python -m pip install --upgrade pip pipenv
+          pipenv requirements --dev > requirements.txt
+        fi
+        python -m pip install --user -r requirements.txt
+
+        echo "***** Running Tests *****"
+        behave

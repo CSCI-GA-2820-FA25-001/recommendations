@@ -1,122 +1,60 @@
-# Tekton Pipeline for Recommendations Service CI/CD
-# Orchestrates the full CI/CD workflow: clone -> lint -> test -> build -> deploy
-
-apiVersion: tekton.dev/v1
+﻿apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: recommendations-pipeline
-  labels:
-    app: recommendations
+  name: cd-pipeline
 spec:
-  description: CI/CD pipeline for the Recommendations microservice
   params:
-    - name: repo-url
+    - description: The URL to the git repo
+      name: GIT_REPO
       type: string
-      description: The git repository URL
-      default: https://github.com/CSCI-GA-2820-FA25-001/recommendations.git
-    - name: branch
+    - default: master
+      description: The reference (branch or ref)
+      name: GIT_REF
       type: string
-      description: The git branch to build
-      default: master
-    - name: image-name
-      type: string
-      description: The image name to build
-      default: cluster-registry:5000/recommendations
-    - name: image-tag
-      type: string
-      description: The image tag
-      default: "1.0"
-    - name: database-uri
-      type: string
-      description: PostgreSQL connection string for tests
-      default: "postgresql+psycopg://postgres:pgs3cr3t@postgres:5432/postgres"
-
-  workspaces:
-    - name: pipeline-workspace
-      description: Workspace shared across all tasks
-
   tasks:
-    # Task 1: Clone the repository
-    - name: clone
-      taskRef:
-        name: clone
+    - name: git-clone
       params:
-        - name: repo-url
-          value: $(params.repo-url)
-        - name: branch
-          value: $(params.branch)
+        - name: CRT_FILENAME
+          value: ca-bundle.crt
+        - name: HTTP_PROXY
+          value: ''
+        - name: HTTPS_PROXY
+          value: ''
+        - name: NO_PROXY
+          value: ''
+        - name: SUBDIRECTORY
+          value: ''
+        - name: USER_HOME
+          value: /home/git
+        - name: DELETE_EXISTING
+          value: 'true'
+        - name: VERBOSE
+          value: 'false'
+        - name: SSL_VERIFY
+          value: 'true'
+        - name: URL
+          value: $(params.GIT_REPO)
+        - name: REVISION
+          value: $(params.GIT_REF)
+        - name: REFSPEC
+          value: ''
+        - name: SUBMODULES
+          value: 'true'
+        - name: DEPTH
+          value: '1'
+        - name: SPARSE_CHECKOUT_DIRECTORIES
+          value: ''
+      taskRef:
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: git-clone
+          - name: namespace
+            value: openshift-pipelines
+        resolver: cluster
       workspaces:
         - name: output
           workspace: pipeline-workspace
-
-    # Task 2: Run linting checks
-    - name: lint
-      taskRef:
-        name: lint
-      runAfter:
-        - clone
-      workspaces:
-        - name: source
-          workspace: pipeline-workspace
-
-    # Task 3: Run unit tests
-    - name: tests
-      taskRef:
-        name: tests
-      runAfter:
-        - lint
-      params:
-        - name: database-uri
-          value: $(params.database-uri)
-      workspaces:
-        - name: source
-          workspace: pipeline-workspace
-
-    # Task 4: Build and push Docker image
-    - name: build-image
-      taskRef:
-        name: build-image
-      runAfter:
-        - tests
-      params:
-        - name: image-name
-          value: $(params.image-name)
-        - name: image-tag
-          value: $(params.image-tag)
-      workspaces:
-        - name: source
-          workspace: pipeline-workspace
-
-    # Task 5: Deploy to Kubernetes
-    - name: deploy
-      taskRef:
-        name: deploy
-      runAfter:
-        - build-image
-      workspaces:
-        - name: source
-          workspace: pipeline-workspace
-
-  finally:
-    - name: cleanup
-      taskSpec:
-        steps:
-          - name: report
-            image: busybox
-            script: |
-              #!/bin/sh
-              echo "========================================"
-              echo "Pipeline execution completed"
-              echo "Repository: $(params.repo-url)"
-              echo "Branch: $(params.branch)"
-              echo "Image: $(params.image-name):$(params.image-tag)"
-              echo "========================================"
-      params:
-        - name: repo-url
-          value: $(params.repo-url)
-        - name: branch
-          value: $(params.branch)
-        - name: image-name
-          value: $(params.image-name)
-        - name: image-tag
-          value: $(params.image-tag)
+  workspaces:
+    - name: pipeline-workspace
