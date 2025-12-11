@@ -28,20 +28,6 @@ from flask_restx import Api, Resource, fields, reqparse
 from service.models import Recommendation, RecommendationType, RecommendationStatus
 from service.common import status  # HTTP Status Codes
 
-######################################################################
-# Configure Swagger before initializing it
-######################################################################
-api = Api(
-    app,
-    version="1.0.0",
-    title="Recommendation Demo REST API Service",
-    description="This is a sample server Recommendation server.",
-    default="recommendations",
-    default_label="Recommendation service operations",
-    doc="/apidocs",
-    prefix="/api",
-)
-
 
 ######################################################################
 # Configure the Root route before OpenAPI
@@ -56,6 +42,21 @@ def index():
 def health_check():
     """Let them know our heart is still beating"""
     return jsonify(status=200, message="Healthy"), status.HTTP_200_OK
+
+
+######################################################################
+# Configure Swagger before initializing it
+######################################################################
+api = Api(
+    app,
+    version="1.0.0",
+    title="Recommendations Demo REST API Service",
+    description="This is a sample server Recommendation server.",
+    default="recommendations",
+    default_label="Recommendations service operations",
+    doc="/apidocs",
+    prefix="/api",
+)
 
 
 ######################################################################
