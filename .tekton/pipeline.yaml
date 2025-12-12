@@ -1,4 +1,4 @@
-﻿apiVersion: tekton.dev/v1
+apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
   name: cd-pipeline
@@ -11,7 +11,7 @@ spec:
       description: The reference (branch or ref)
       name: GIT_REF
       type: string
-    - default: recommendationservice
+    - default: recommendations
       description: Name of the application
       name: APP_NAME
       type: string
@@ -86,7 +86,7 @@ spec:
       workspaces:
         - name: source
           workspace: pipeline-workspace
-    - name: testing
+    - name: pytest-env
       params:
         - name: pytest-args
           value: []
@@ -129,7 +129,7 @@ spec:
           value: 'false'
       runAfter:
         - pylint
-        - testing
+        - pytest-env
       taskRef:
         params:
           - name: kind
