@@ -19,6 +19,10 @@ spec:
       description: The name of the image to build
       name: IMAGE_NAME
       type: string
+    - default: 'https://recommendations-zl3152-dev.apps.rm3.7wse.p1.openshiftapps.com'
+      description: The base url of app
+      name: BASE_URL
+      type: string
   tasks:
     - name: git-clone
       params:
@@ -157,9 +161,9 @@ spec:
         - name: base-url
           value: $(params.BASE_URL)
         - name: wait-seconds
-          value: "60"
+          value: '60'
         - name: driver
-          value: "chrome"
+          value: chrome
       runAfter:
         - deploy-image
       taskRef:
