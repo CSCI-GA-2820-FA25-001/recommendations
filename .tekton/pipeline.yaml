@@ -11,7 +11,7 @@ spec:
       description: The reference (branch or ref)
       name: GIT_REF
       type: string
-    - default: recommendationservice
+    - default: recommendations
       description: Name of the application
       name: APP_NAME
       type: string
@@ -82,7 +82,7 @@ spec:
       workspaces:
         - name: source
           workspace: pipeline-workspace
-    - name: testing
+    - name: pytest-env
       params:
         - name: pytest-args
           value: []
@@ -125,7 +125,7 @@ spec:
           value: 'false'
       runAfter:
         - pylint
-        - testing
+        - pytest-env
       taskRef:
         params:
           - name: kind
@@ -135,6 +135,20 @@ spec:
           - name: namespace
             value: openshift-pipelines
         resolver: cluster
+      workspaces:
+        - name: source
+          workspace: pipeline-workspace
+    - name: deploy-image
+      params:
+        - name: image-name
+          value: $(params.IMAGE_NAME)
+        - name: manifest-dir
+          value: k8s
+      runAfter:
+        - buildah
+      taskRef:
+        kind: Task
+        name: deploy-image
       workspaces:
         - name: source
           workspace: pipeline-workspace
