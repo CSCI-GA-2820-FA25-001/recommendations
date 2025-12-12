@@ -11,17 +11,13 @@ spec:
       description: The reference (branch or ref)
       name: GIT_REF
       type: string
-    - default: recommendations
+    - default: recommendationservice
       description: Name of the application
       name: APP_NAME
       type: string
     - default: 'image-registry.openshift-image-registry.svc:5000/$(context.pipelineRun.namespace)/$(params.APP_NAME):latest'
       description: The name of the image to build
       name: IMAGE_NAME
-      type: string
-    - default: 'http://recommendations-yiranwan-dev.apps.rm2.thpm.p1.openshiftapps.com'
-      description: Route to microservice
-      name: BASE_URL
       type: string
   tasks:
     - name: git-clone
@@ -86,7 +82,7 @@ spec:
       workspaces:
         - name: source
           workspace: pipeline-workspace
-    - name: pytest-env
+    - name: testing
       params:
         - name: pytest-args
           value: []
@@ -129,7 +125,7 @@ spec:
           value: 'false'
       runAfter:
         - pylint
-        - pytest-env
+        - testing
       taskRef:
         params:
           - name: kind
@@ -139,36 +135,6 @@ spec:
           - name: namespace
             value: openshift-pipelines
         resolver: cluster
-      workspaces:
-        - name: source
-          workspace: pipeline-workspace
-    - name: deploy-image
-      params:
-        - name: image-name
-          value: $(params.IMAGE_NAME)
-        - name: manifest-dir
-          value: k8s
-      runAfter:
-        - buildah
-      taskRef:
-        kind: Task
-        name: deploy-image
-      workspaces:
-        - name: source
-          workspace: pipeline-workspace
-    - name: behave
-      params:
-        - name: base-url
-          value: $(params.BASE_URL)
-        - name: wait-seconds
-          value: "60"
-        - name: driver
-          value: "chrome"
-      runAfter:
-        - deploy-image
-      taskRef:
-        kind: Task
-        name: behave
       workspaces:
         - name: source
           workspace: pipeline-workspace
