@@ -193,7 +193,7 @@ $(function () {
 
     const params = new URLSearchParams();
     if (baseId) params.set("base_product_id", baseId);       // your API also accepts product_a_id
-    if (relType) params.set("relationship_type", relType);   // maps to RecommendationType
+    if (relType) params.set("recommendation_type", relType);   // maps to RecommendationType
     if (statusVal) params.set("status", statusVal);          // maps to RecommendationStatus
     // optional: params.set("sort","created_at_desc");
 
