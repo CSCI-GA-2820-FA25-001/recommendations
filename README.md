@@ -147,5 +147,5 @@ kubectl delete -f k8s/
 
 Notes:
 - The manifests in `k8s/` include an Ingress (Traefik) that routes `/` to the service.
-- The application image is `cluster-registry:5000/petshop:1.0` by default (see `Makefile`).
+- The application image is `cluster-registry:5000/recommendations:1.0` by default (see `Makefile`).
 - A Postgres Deployment/Service is included for local development.
